@@ -75,7 +75,7 @@ jobs:
         run: cargo test --all-features
 
   build:
-    name: Build
+    name: Build macOS
     runs-on: macos-latest
     needs: test
     if: "!startsWith(github.ref, 'refs/tags/v')"
@@ -98,25 +98,26 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Build release (x86_64)
-        run: cargo build --release --target x86_64-apple-darwin
+      - name: Install cargo-packager
+        run: cargo install cargo-packager --locked
 
-      - name: Build release (aarch64)
-        run: cargo build --release --target aarch64-apple-darwin
+      - name: Build DMG
+        run: ./package-macos.sh
 
-      - name: Create Universal Binary
-        run: |
-          mkdir -p target/universal-apple-darwin/release
-          lipo -create \
-            target/x86_64-apple-darwin/release/restgap \
-            target/aarch64-apple-darwin/release/restgap \
-            -output target/universal-apple-darwin/release/restgap
+      - name: List dist directory
+        run: ls -lah dist/
 
-      - name: Upload artifact
+      - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: restgap-macos-universal
-          path: target/universal-apple-darwin/release/restgap
+          name: restgap-macos-dmg
+          path: dist/*.dmg
+
+      - name: Upload .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: restgap-macos-app
+          path: dist/*.app
 
   build-windows:
     name: Build Windows
@@ -167,10 +168,10 @@ jobs:
             exit 1
           }
 
-      - name: Upload artifact
+      - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
-          name: restgap-windows-x86_64
+          name: restgap-windows-exe
           path: target/release/restgap.exe
 
   build-linux:
@@ -222,10 +223,10 @@ jobs:
             exit 1
           fi
 
-      - name: Upload artifact
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: restgap-linux-x86_64
+          name: restgap-linux-binary
           path: target/release/restgap
 
   release:
