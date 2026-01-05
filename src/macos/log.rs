@@ -16,7 +16,7 @@ pub enum LogLevel {
 }
 
 impl LogLevel {
-    fn as_str(&self) -> &'static str {
+    const fn as_str(self) -> &'static str {
         match self {
             Self::Debug => "DEBUG",
             Self::Info => "INFO",

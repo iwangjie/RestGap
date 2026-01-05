@@ -1,6 +1,6 @@
 //! 应用委托模块
 //!
-//! 定义 NSApplicationDelegate 实现。
+//! 定义 `NSApplicationDelegate` 实现。
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};

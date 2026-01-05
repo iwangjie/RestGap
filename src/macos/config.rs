@@ -30,7 +30,7 @@ impl Config {
     const LEGACY_KEY_INTERVAL_MINUTES: &'static str = "restp.interval_minutes";
     const LEGACY_KEY_BREAK_SECONDS: &'static str = "restp.break_seconds";
 
-    /// 从 NSUserDefaults 加载配置
+    /// 从 `NSUserDefaults` 加载配置
     pub fn load() -> Self {
         let defaults = NSUserDefaults::standardUserDefaults();
 
@@ -57,13 +57,13 @@ impl Config {
         let interval_minutes = if interval_raw <= 0 {
             Self::DEFAULT_INTERVAL_MINUTES
         } else {
-            interval_raw as u64
+            u64::try_from(interval_raw).unwrap_or(Self::DEFAULT_INTERVAL_MINUTES)
         };
 
         let break_seconds = if break_raw <= 0 {
             Self::DEFAULT_BREAK_SECONDS
         } else {
-            break_raw as u64
+            u64::try_from(break_raw).unwrap_or(Self::DEFAULT_BREAK_SECONDS)
         };
 
         Self {
@@ -80,23 +80,26 @@ impl Config {
         }
     }
 
-    /// 保存配置到 NSUserDefaults
+    /// 保存配置到 `NSUserDefaults`
     pub fn save(&self) {
         let defaults = NSUserDefaults::standardUserDefaults();
         let interval_key = NSString::from_str(Self::KEY_INTERVAL_MINUTES);
         let break_key = NSString::from_str(Self::KEY_BREAK_SECONDS);
 
-        defaults.setInteger_forKey(self.interval_minutes as NSInteger, &interval_key);
-        defaults.setInteger_forKey(self.break_seconds as NSInteger, &break_key);
+        let interval_minutes = NSInteger::try_from(self.interval_minutes).unwrap_or(NSInteger::MAX);
+        let break_seconds = NSInteger::try_from(self.break_seconds).unwrap_or(NSInteger::MAX);
+
+        defaults.setInteger_forKey(interval_minutes, &interval_key);
+        defaults.setInteger_forKey(break_seconds, &break_key);
     }
 
     /// 获取工作间隔时长
-    pub fn work_interval(&self) -> Duration {
+    pub const fn work_interval(&self) -> Duration {
         Duration::from_secs(self.interval_minutes.saturating_mul(60))
     }
 
     /// 获取休息时长
-    pub fn break_duration(&self) -> Duration {
+    pub const fn break_duration(&self) -> Duration {
         Duration::from_secs(self.break_seconds)
     }
 

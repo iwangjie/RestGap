@@ -46,7 +46,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(config: Config) -> Self {
+    pub const fn new(config: Config) -> Self {
         Self {
             config,
             phase: Phase::Working,

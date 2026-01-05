@@ -10,16 +10,23 @@ pub fn format_hhmm(t: SystemTime) -> String {
     };
 
     let mut tm: libc::tm = unsafe { std::mem::zeroed() };
-    let mut seconds: libc::time_t = duration.as_secs() as libc::time_t;
-    let tm_ptr = unsafe { libc::localtime_r(&mut seconds, &mut tm) };
+    let seconds: libc::time_t = libc::time_t::try_from(duration.as_secs()).unwrap_or_default();
+    let tm_ptr =
+        unsafe { libc::localtime_r(std::ptr::addr_of!(seconds), std::ptr::addr_of_mut!(tm)) };
     if tm_ptr.is_null() {
         return "--:--".to_string();
     }
 
     let mut buf = [0u8; 6]; // "HH:MM\0"
     let fmt = b"%H:%M\0";
-    let written =
-        unsafe { libc::strftime(buf.as_mut_ptr().cast(), buf.len(), fmt.as_ptr().cast(), &tm) };
+    let written = unsafe {
+        libc::strftime(
+            buf.as_mut_ptr().cast(),
+            buf.len(),
+            fmt.as_ptr().cast(),
+            std::ptr::addr_of!(tm),
+        )
+    };
     if written == 0 {
         return "--:--".to_string();
     }
@@ -32,17 +39,17 @@ pub fn approx_duration(d: Duration) -> String {
     if secs >= 3600 {
         let hours = secs / 3600;
         let minutes = (secs % 3600) / 60;
-        return format!("≈{}h{}m", hours, minutes);
+        return format!("≈{hours}h{minutes}m");
     }
     if secs >= 600 {
         // >= 10m, round to 5m
         let minutes = ((secs + 150) / 300) * 5;
-        return format!("≈{}m", minutes);
+        return format!("≈{minutes}m");
     }
     if secs >= 120 {
         // >= 2m, round to 1m
         let minutes = (secs + 30) / 60;
-        return format!("≈{}m", minutes);
+        return format!("≈{minutes}m");
     }
     if secs >= 60 {
         return "≈1m".to_string();
@@ -56,12 +63,12 @@ pub fn approx_duration(d: Duration) -> String {
 pub fn format_countdown(seconds: u64) -> String {
     let mins = seconds / 60;
     let secs = seconds % 60;
-    format!("{:02}:{:02}", mins, secs)
+    format!("{mins:02}:{secs:02}")
 }
 
 /// 播放系统声音
 pub fn play_sound(sound_name: &str) {
-    let path = format!("/System/Library/Sounds/{}.aiff", sound_name);
+    let path = format!("/System/Library/Sounds/{sound_name}.aiff");
     let _ = Command::new("afplay").arg(&path).spawn();
 }
 

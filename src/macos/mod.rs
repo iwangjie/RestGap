@@ -38,7 +38,7 @@ pub fn run() {
         let _ = app.setActivationPolicy(NSApplicationActivationPolicy::Accessory);
 
         let delegate = create_delegate(mtm);
-        let delegate_ref: &delegate::RestGapDelegate = &*delegate;
+        let delegate_ref: &delegate::RestGapDelegate = &delegate;
         app.setDelegate(Some(ProtocolObject::<dyn NSApplicationDelegate>::from_ref(
             delegate_ref,
         )));

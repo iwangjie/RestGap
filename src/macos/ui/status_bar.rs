@@ -12,7 +12,7 @@ use super::super::delegate::RestGapDelegate;
 use super::super::state::{Phase, with_state, with_state_ref};
 use super::super::utils::{approx_duration, format_hhmm};
 
-/// 获取 delegate 的 AnyObject 引用
+/// 获取 delegate 的 `AnyObject` 引用
 pub fn target_anyobject(delegate: &RestGapDelegate) -> &AnyObject {
     delegate.as_super().as_super()
 }
@@ -28,9 +28,8 @@ pub fn refresh_status_title() {
             Phase::Working => {
                 let hm = state
                     .phase_deadline_wall
-                    .map(format_hhmm)
-                    .unwrap_or_else(|| "--:--".to_string());
-                format!("⏰ {}", hm)
+                    .map_or_else(|| "--:--".to_string(), format_hhmm);
+                format!("⏰ {hm}")
             }
             Phase::Breaking => {
                 let remaining = state
@@ -88,9 +87,7 @@ pub fn refresh_menu_info() {
             }
         };
 
-        let next_hm = next_break_wall
-            .map(format_hhmm)
-            .unwrap_or_else(|| "--:--".to_string());
+        let next_hm = next_break_wall.map_or_else(|| "--:--".to_string(), format_hhmm);
         let next_title = format!(
             "下次休息：{}（{}）",
             next_hm,
@@ -106,9 +103,7 @@ pub fn refresh_menu_info() {
                 let remaining = phase_deadline_mono
                     .and_then(|t| t.checked_duration_since(now))
                     .unwrap_or(Duration::from_secs(0));
-                let end_hm = phase_deadline_wall
-                    .map(format_hhmm)
-                    .unwrap_or_else(|| "--:--".to_string());
+                let end_hm = phase_deadline_wall.map_or_else(|| "--:--".to_string(), format_hhmm);
                 let title = format!("休息剩余：{}（至 {}）", approx_duration(remaining), end_hm);
                 remaining_item.setTitle(&NSString::from_str(&title));
             }

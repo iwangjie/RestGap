@@ -1,23 +1,6 @@
-# Clippy 配置
-# https://doc.rust-lang.org/clippy/
-
-# 警告级别
-warn = [
-    "clippy::all",
-    "clippy::pedantic",
-    "clippy::nursery",
-]
-
-# 允许的 lint（根据项目特性调整）
-allow = [
-    # macOS 特定代码需要大量 unsafe
-    "clippy::missing_safety_doc",
-    # 某些情况下需要显式类型
-    "clippy::redundant_closure_for_method_calls",
-    # 项目使用中文注释
-    "clippy::doc_markdown",
-    # 允许使用 expect
-    "clippy::expect_used",
-    # 允许 unwrap_or_default
-    "clippy::unwrap_or_default",
-]
+# Clippy 配置（仅支持 clippy 的“参数化配置项”，不支持在这里写 lint 级别）
+# 参考：https://doc.rust-lang.org/clippy/configuration.html
+#
+# 想设置 lint 级别（例如启用 clippy::pedantic / clippy::nursery 或 allow 某些 lint）：
+# - 推荐在 CI 里用 `cargo clippy -- ... -W/-D/-A ...`
+# - 或在代码里用 `#![cfg_attr(clippy, ...)]` / `#[allow(clippy::...)]`

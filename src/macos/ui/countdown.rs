@@ -17,6 +17,7 @@ use super::super::utils::{format_countdown, play_sound};
 use super::status_bar::target_anyobject;
 
 /// 显示倒计时窗口
+#[allow(clippy::too_many_lines)]
 pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_start_sound: bool) {
     let mtm = delegate.mtm();
 
@@ -29,12 +30,10 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     }
 
     // 获取主屏幕尺寸
-    let screen_frame = NSScreen::mainScreen(mtm)
-        .map(|s| s.frame())
-        .unwrap_or(NSRect::new(
-            NSPoint::new(0.0, 0.0),
-            NSSize::new(1920.0, 1080.0),
-        ));
+    let screen_frame = NSScreen::mainScreen(mtm).map_or(
+        NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(1920.0, 1080.0)),
+        |s| s.frame(),
+    );
 
     // 窗口占满屏幕
     let window_width: CGFloat = screen_frame.size.width;
@@ -75,7 +74,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     // 创建标题标签
     let title_frame = NSRect::new(
         NSPoint::new(padding, center_y + 60.0),
-        NSSize::new(window_width - padding * 2.0, 50.0),
+        NSSize::new(padding.mul_add(-2.0, window_width), 50.0),
     );
     let title_label = {
         let label = NSTextField::initWithFrame(NSTextField::alloc(mtm), title_frame);
@@ -93,7 +92,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     // 创建倒计时标签
     let countdown_frame = NSRect::new(
         NSPoint::new(padding, center_y - 40.0),
-        NSSize::new(window_width - padding * 2.0, 100.0),
+        NSSize::new(padding.mul_add(-2.0, window_width), 100.0),
     );
     let countdown_label = {
         let label = NSTextField::initWithFrame(NSTextField::alloc(mtm), countdown_frame);
@@ -112,7 +111,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     // 创建提示标签
     let hint_frame = NSRect::new(
         NSPoint::new(padding, center_y - 120.0),
-        NSSize::new(window_width - padding * 2.0, 40.0),
+        NSSize::new(padding.mul_add(-2.0, window_width), 40.0),
     );
     let hint_label = {
         let label = NSTextField::initWithFrame(NSTextField::alloc(mtm), hint_frame);
