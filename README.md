@@ -1,4 +1,5 @@
-# RestGap (息间)
+# RestGap (息间) 
+<img width="150" height="150" alt="original" src="https://github.com/user-attachments/assets/e26b58e8-2f76-43c6-9dbd-36b507d1e0a9" />
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
