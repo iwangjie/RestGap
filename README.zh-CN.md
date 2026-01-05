@@ -2,22 +2,31 @@
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
-息间（RestGap）是一款纯 Rust 实现的 macOS 菜单栏休息提醒软件（事件驱动 / 非轮询），追求极低占用与足够有效的休息。
+息间（RestGap）是一款纯 Rust 实现的跨平台休息提醒软件（事件驱动 / 非轮询），支持 **macOS、Windows 和 Linux**，追求极低占用与足够有效的休息。
+
+## 平台支持
+
+- **macOS**: 完整 GUI 支持，使用原生 AppKit API 实现菜单栏集成
+- **Windows**: 基于控制台的实现，提供核心计时功能
+- **Linux**: 基于控制台的实现，提供核心计时功能
 
 ## 技术栈
 
 - Rust（Edition 2024）
-- AppKit/Foundation 绑定：`objc2`、`objc2-app-kit`、`objc2-foundation`
-- 打包：`cargo-packager`（配合 `hdiutil` 生成 `.dmg`）
+- **macOS**: AppKit/Foundation 绑定，使用 `objc2`、`objc2-app-kit`、`objc2-foundation`
+- **Windows/Linux**: 跨平台配置存储，使用 `serde` 和 `dirs`
+- 打包：`cargo-packager`（配合 `hdiutil` 生成 `.dmg`，仅 macOS）
 
 ## 特性
 
-- 纯 Rust 实现（仓库内无 Swift/ObjC 代码）
-- Intel + Apple Silicon（universal2）兼容
+- **跨平台**：支持 macOS、Windows 和 Linux
+- 纯 Rust 实现
 - 休息间隔/休息时长可配置
-- 倒计时窗口不提供“跳过”动作，保障休息有效性
+- 休息倒计时（macOS 全屏窗口，Windows/Linux 控制台）
 - 无账号、无遥测、无联网请求
-- 无独立配置文件（配置存储在系统偏好 `NSUserDefaults`）
+- 配置存储在平台适当的位置：
+  - **macOS**: `NSUserDefaults`（系统偏好设置）
+  - **Windows/Linux**: 用户配置目录中的 JSON 文件
 
 ## 运行
 
@@ -26,13 +35,21 @@ cargo build --release
 ./target/release/restgap
 ```
 
-运行后仅在菜单栏显示图标与倒计时信息。菜单里可手动“现在休息 / 配置 / 关于 / 退出”。
+**macOS**: 运行后仅在菜单栏显示图标与倒计时信息。菜单里可手动"现在休息 / 配置 / 关于 / 退出"。
 
-提示：仓库提供 `./start.sh`、`./stop.sh`、`./status.sh` 便于开发时后台运行（会在仓库目录生成本地 `.pid`/`.log` 文件）。
+**Windows/Linux**: 应用在控制台中运行并打印计时器更新。它将在配置的间隔时间自动触发休息。
+
+提示：在 macOS 上，仓库提供 `./start.sh`、`./stop.sh`、`./status.sh` 便于开发时后台运行（会在仓库目录生成本地 `.pid`/`.log` 文件）。
 
 ## 配置
 
-点击菜单栏里的“配置”，设置“每 N 分钟休息 N 秒”。配置会保存在系统偏好里（`NSUserDefaults`）。
+**macOS**: 点击菜单栏里的"配置"，设置"每 N 分钟休息 N 秒"。配置会保存在系统偏好里（`NSUserDefaults`）。
+
+**Windows/Linux**: 编辑配置文件：
+- Windows: `%APPDATA%\restgap\config.json`
+- Linux: `~/.config/restgap/config.json`
+
+或修改 `src/common/config.rs` 中的常量并重新编译。
 
 - 默认：每 30 分钟休息 120 秒
 - 范围：每 1–240 分钟休息一次；休息时长 5–3600 秒
@@ -46,8 +63,6 @@ cargo build --release
 Release 配置已开启体积优化（`opt-level="z" / lto / codegen-units=1 / panic=abort / strip`）。
 
 ## 打包（Cargo Packager）
-
-> 注意：当前 `restgap` 仅在 macOS 上提供完整功能；Windows 版本目前只会提示“仅支持 macOS”。
 
 1) 安装 Cargo Packager：
 
@@ -78,6 +93,26 @@ cargo packager --release --formats default
 
 打包配置在 `Cargo.toml` 的 `[package.metadata.packager]`；正式分发前建议把 `identifier = "com.example.restgap"` 改成你自己的反向域名标识。
 
+## 平台特定说明
+
+### macOS
+- 提供完整的 GUI 功能，原生菜单栏集成
+- 休息倒计时显示为全屏窗口
+- 设置存储在 `NSUserDefaults` 中
+- 需要 macOS 10.13+ (High Sierra 或更高版本)
+
+### Windows
+- 基于控制台的实现
+- 计时器在后台运行并打印更新
+- 配置存储在 `%APPDATA%\restgap\config.json`
+- 未来版本可能会添加系统托盘支持
+
+### Linux
+- 基于控制台的实现
+- 计时器在后台运行并打印更新
+- 配置存储在 `~/.config/restgap/config.json`
+- 未来版本可能会为桌面环境添加系统托盘支持
+
 ## 参与贡献
 
 欢迎提交 Issue / PR（尽量保持改动小且聚焦）。
@@ -91,4 +126,3 @@ cargo test
 ## 许可协议
 
 目前尚未指定许可证；如需开源发布，请添加 `LICENSE` 并更新 `Cargo.toml`。
-
