@@ -1,0 +1,220 @@
+//! 状态栏 UI 模块
+
+use std::time::{Duration, Instant};
+
+use objc2::runtime::{AnyObject, ProtocolObject};
+use objc2::{sel, ClassType, MainThreadOnly};
+use objc2_app_kit::{NSMenu, NSMenuDelegate, NSMenuItem, NSStatusBar, NSVariableStatusItemLength};
+use objc2_foundation::NSString;
+
+use super::super::constants::APP_NAME_ZH;
+use super::super::delegate::RestGapDelegate;
+use super::super::state::{with_state, with_state_ref, Phase};
+use super::super::utils::{approx_duration, format_hhmm};
+
+/// 获取 delegate 的 AnyObject 引用
+pub fn target_anyobject(delegate: &RestGapDelegate) -> &AnyObject {
+    delegate.as_super().as_super()
+}
+
+/// 刷新状态栏标题
+pub fn refresh_status_title() {
+    with_state(|state| {
+        let Some(status_item) = state.status_item.as_ref() else {
+            return;
+        };
+
+        let title = match state.phase {
+            Phase::Working => {
+                let hm = state
+                    .phase_deadline_wall
+                    .map(format_hhmm)
+                    .unwrap_or_else(|| "--:--".to_string());
+                format!("⏰ {}", hm)
+            }
+            Phase::Breaking => {
+                let remaining = state
+                    .phase_deadline_mono
+                    .and_then(|t| t.checked_duration_since(Instant::now()))
+                    .unwrap_or(Duration::from_secs(0));
+                format!("☕ {}", approx_duration(remaining))
+            }
+        };
+        let ns_title = NSString::from_str(&title);
+        status_item.setTitle(Some(&ns_title));
+    });
+}
+
+/// 设置"现在休息"菜单项的启用状态
+pub fn set_rest_now_enabled(enabled: bool) {
+    with_state(|state| {
+        let Some(item) = state.rest_now_item.as_ref() else {
+            return;
+        };
+        item.setEnabled(enabled);
+    });
+}
+
+/// 刷新菜单信息
+pub fn refresh_menu_info() {
+    let now = Instant::now();
+    with_state(|state| {
+        let Some(next_item) = state.next_break_item.as_ref() else {
+            return;
+        };
+        let Some(remaining_item) = state.remaining_break_item.as_ref() else {
+            return;
+        };
+
+        let phase_deadline_mono = state.phase_deadline_mono;
+        let phase_deadline_wall = state.phase_deadline_wall;
+
+        let (next_break_in, next_break_wall) = match state.phase {
+            Phase::Working => {
+                let in_dur = phase_deadline_mono
+                    .and_then(|t| t.checked_duration_since(now))
+                    .unwrap_or(Duration::from_secs(0));
+                (in_dur, phase_deadline_wall)
+            }
+            Phase::Breaking => {
+                let remaining_break = phase_deadline_mono
+                    .and_then(|t| t.checked_duration_since(now))
+                    .unwrap_or(Duration::from_secs(0));
+                let in_dur = remaining_break + state.config.work_interval();
+                let wall = phase_deadline_wall
+                    .and_then(|t| t.checked_add(state.config.work_interval()))
+                    .or(phase_deadline_wall);
+                (in_dur, wall)
+            }
+        };
+
+        let next_hm = next_break_wall
+            .map(format_hhmm)
+            .unwrap_or_else(|| "--:--".to_string());
+        let next_title = format!(
+            "下次休息：{}（{}）",
+            next_hm,
+            approx_duration(next_break_in)
+        );
+        next_item.setTitle(&NSString::from_str(&next_title));
+
+        match state.phase {
+            Phase::Working => {
+                remaining_item.setTitle(&NSString::from_str("休息剩余：—"));
+            }
+            Phase::Breaking => {
+                let remaining = phase_deadline_mono
+                    .and_then(|t| t.checked_duration_since(now))
+                    .unwrap_or(Duration::from_secs(0));
+                let end_hm = phase_deadline_wall
+                    .map(format_hhmm)
+                    .unwrap_or_else(|| "--:--".to_string());
+                let title = format!("休息剩余：{}（至 {}）", approx_duration(remaining), end_hm);
+                remaining_item.setTitle(&NSString::from_str(&title));
+            }
+        }
+    });
+}
+
+/// 刷新头部标题
+pub fn refresh_header_title() {
+    with_state(|state| {
+        let Some(item) = state.header_item.as_ref() else {
+            return;
+        };
+        let title = format!(
+            "{APP_NAME_ZH} · 每 {} 分钟休息 {} 秒",
+            state.config.interval_minutes, state.config.break_seconds
+        );
+        item.setTitle(&NSString::from_str(&title));
+    });
+}
+
+/// 设置状态栏菜单
+pub fn setup_status_item(delegate: &RestGapDelegate) {
+    let mtm = delegate.mtm();
+    let status_item =
+        NSStatusBar::systemStatusBar().statusItemWithLength(NSVariableStatusItemLength);
+
+    let menu = NSMenu::new(mtm);
+    menu.setAutoenablesItems(false);
+    menu.setDelegate(Some(ProtocolObject::<dyn NSMenuDelegate>::from_ref(
+        delegate,
+    )));
+
+    let header = format!(
+        "{APP_NAME_ZH} · 每 {} 分钟休息 {} 秒",
+        with_state_ref(|s| s.config.interval_minutes),
+        with_state_ref(|s| s.config.break_seconds),
+    );
+    let header_item = NSMenuItem::sectionHeaderWithTitle(&NSString::from_str(&header), mtm);
+    menu.addItem(&header_item);
+
+    let next_break_item = unsafe {
+        menu.addItemWithTitle_action_keyEquivalent(
+            &NSString::from_str("下次休息：--:--"),
+            None,
+            &NSString::from_str(""),
+        )
+    };
+    next_break_item.setEnabled(false);
+
+    let remaining_break_item = unsafe {
+        menu.addItemWithTitle_action_keyEquivalent(
+            &NSString::from_str("休息剩余：—"),
+            None,
+            &NSString::from_str(""),
+        )
+    };
+    remaining_break_item.setEnabled(false);
+
+    menu.addItem(&NSMenuItem::separatorItem(mtm));
+
+    let rest_now_item = unsafe {
+        menu.addItemWithTitle_action_keyEquivalent(
+            &NSString::from_str("现在休息"),
+            Some(sel!(restNow:)),
+            &NSString::from_str(""),
+        )
+    };
+    unsafe { rest_now_item.setTarget(Some(target_anyobject(delegate))) };
+
+    let settings_item = unsafe {
+        menu.addItemWithTitle_action_keyEquivalent(
+            &NSString::from_str("配置"),
+            Some(sel!(openSettings:)),
+            &NSString::from_str(""),
+        )
+    };
+    unsafe { settings_item.setTarget(Some(target_anyobject(delegate))) };
+
+    let about_item = unsafe {
+        menu.addItemWithTitle_action_keyEquivalent(
+            &NSString::from_str(&format!("关于 {APP_NAME_ZH}")),
+            Some(sel!(about:)),
+            &NSString::from_str(""),
+        )
+    };
+    unsafe { about_item.setTarget(Some(target_anyobject(delegate))) };
+
+    menu.addItem(&NSMenuItem::separatorItem(mtm));
+
+    let quit_item = unsafe {
+        menu.addItemWithTitle_action_keyEquivalent(
+            &NSString::from_str("退出"),
+            Some(sel!(quit:)),
+            &NSString::from_str(""),
+        )
+    };
+    unsafe { quit_item.setTarget(Some(target_anyobject(delegate))) };
+
+    status_item.setMenu(Some(&menu));
+
+    with_state(|state| {
+        state.status_item = Some(status_item);
+        state.header_item = Some(header_item);
+        state.rest_now_item = Some(rest_now_item);
+        state.next_break_item = Some(next_break_item);
+        state.remaining_break_item = Some(remaining_break_item);
+    });
+}

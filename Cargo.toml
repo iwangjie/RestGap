@@ -2,6 +2,15 @@
 name = "restgap"
 version = "0.1.0"
 edition = "2024"
+authors = ["iwangjie <345127857@qq.com>"]
+description = "息间（RestGap）— macOS 菜单栏休息提醒（事件驱动 / 非轮询）"
+readme = "README.md"
+homepage = "https://github.com/iwangjie/restgap"
+repository = "https://github.com/iwangjie/restgap"
+license = "MIT"
+keywords = ["macos", "menubar", "rest", "reminder", "health"]
+categories = ["gui"]
+rust-version = "1.85"
 
 [package.metadata.packager]
 product-name = "RestGap"
@@ -53,9 +62,36 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = [
 objc2-core-foundation = "0.3.2"
 libc = "0.2"
 
+[dev-dependencies]
+# 测试相关依赖（未来可添加）
+
+[profile.dev]
+# 开发构建配置
+opt-level = 0
+debug = true
+
 [profile.release]
 opt-level = "z"      # 优化代码大小
 lto = true           # 开启链接时优化
 codegen-units = 1    # 牺牲编译速度换取更好的优化
 panic = "abort"      # 移除展开栈的代码，减小体积
 strip = true         # 剔除符号表
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false
+
+[lints.rust]
+unsafe_code = "warn"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
+# 允许的 lint
+missing_safety_doc = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
