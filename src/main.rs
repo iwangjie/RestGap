@@ -3,6 +3,7 @@
 //! 支持 macOS、Windows 和 Linux 的休息提醒应用，使用事件驱动架构而非轮询，
 //! 追求极低的 CPU 和内存占用。
 
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 mod common;
 
 #[cfg(target_os = "macos")]
