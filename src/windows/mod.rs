@@ -2,6 +2,11 @@
 //!
 //! This is a basic implementation that provides the core functionality
 //! for Windows using cross-platform libraries.
+//!
+//! Note: The timer logic is intentionally duplicated between Windows and Linux
+//! implementations to keep platform-specific code isolated. This makes it easier
+//! to add platform-specific features in the future (e.g., system tray on Windows,
+//! desktop notifications on Linux) without affecting the other platforms.
 
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -70,7 +75,7 @@ pub fn run() {
     loop {
         thread::sleep(Duration::from_secs(1));
 
-        let mut state = state.lock().unwrap();
+        let mut state = state.lock().expect("Failed to lock state mutex");
 
         if state.is_breaking {
             let remaining = state.break_time_remaining();
