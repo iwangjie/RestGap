@@ -1,5 +1,8 @@
 # 息间（RestGap）
 
+<img width="150" height="150" alt="original" src="https://github.com/user-attachments/assets/e26b58e8-2f76-43c6-9dbd-36b507d1e0a9" />
+
+
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 息间（RestGap）是一款纯 Rust 实现的 macOS 菜单栏休息提醒软件（事件驱动 / 非轮询），追求极低占用与足够有效的休息。
@@ -18,6 +21,14 @@
 - 倒计时窗口不提供“跳过”动作，保障休息有效性
 - 无账号、无遥测、无联网请求
 - 无独立配置文件（配置存储在系统偏好 `NSUserDefaults`）
+
+## 截屏
+
+<img width="352" height="298" alt="image" src="https://github.com/user-attachments/assets/930ac760-fb87-4452-9200-2848ecb9cbf4" />
+
+<img width="352" height="298" alt="image" src="https://github.com/user-attachments/assets/764e9c38-3561-4144-af0c-c36a5fd96699" />
+
+<img width="2880" height="1800" alt="3214f6f2fa29810e5c37aaff6790a49b" src="https://github.com/user-attachments/assets/eae4781b-d4d8-49d4-9bfb-ba8809786381" />
 
 ## 运行
 
