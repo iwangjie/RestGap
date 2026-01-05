@@ -33,9 +33,17 @@ if [[ ! -f "${APP_BIN}" ]]; then
   exit 1
 fi
 
-if ! lipo -info "${FAT_BIN}" | rg -q 'x86_64.*arm64|arm64.*x86_64'; then
-  echo "❌ universal2 二进制看起来不是 fat file：$(lipo -info "${FAT_BIN}")"
-  exit 1
+LIPO_INFO="$(lipo -info "${FAT_BIN}")"
+if command -v rg >/dev/null 2>&1; then
+  if ! echo "${LIPO_INFO}" | rg -q 'x86_64.*arm64|arm64.*x86_64'; then
+    echo "❌ universal2 二进制看起来不是 fat file：${LIPO_INFO}"
+    exit 1
+  fi
+else
+  if ! echo "${LIPO_INFO}" | grep -Eq 'x86_64.*arm64|arm64.*x86_64'; then
+    echo "❌ universal2 二进制看起来不是 fat file：${LIPO_INFO}"
+    exit 1
+  fi
 fi
 
 echo "🧩 写入 universal2 可执行文件到 .app..."

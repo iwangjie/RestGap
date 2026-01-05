@@ -1,0 +1,6 @@
+# Clippy 配置（仅支持 clippy 的“参数化配置项”，不支持在这里写 lint 级别）
+# 参考：https://doc.rust-lang.org/clippy/configuration.html
+#
+# 想设置 lint 级别（例如启用 clippy::pedantic / clippy::nursery 或 allow 某些 lint）：
+# - 推荐在 CI 里用 `cargo clippy -- ... -W/-D/-A ...`
+# - 或在代码里用 `#![cfg_attr(clippy, ...)]` / `#[allow(clippy::...)]`
