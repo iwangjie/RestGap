@@ -7,7 +7,7 @@ use objc2_foundation::NSTimer;
 
 use super::config::Config;
 use super::delegate::RestGapDelegate;
-use super::state::{with_state, NotifyEvent, Phase};
+use super::state::{NotifyEvent, Phase, with_state};
 use super::ui::{
     finish_countdown, refresh_header_title, refresh_menu_info, refresh_status_title,
     set_rest_now_enabled, show_countdown_window, target_anyobject,

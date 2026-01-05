@@ -3,14 +3,16 @@
 use std::process::Command;
 
 use objc2::rc::Retained;
-use objc2::{msg_send, MainThreadOnly};
-use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSTextField, NSView};
+use objc2::{MainThreadOnly, msg_send};
+use objc2_app_kit::{
+    NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSTextField, NSView,
+};
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 
-use super::super::config::{clamp_u64, Config};
+use super::super::config::{Config, clamp_u64};
 use super::super::constants::APP_NAME_DISPLAY;
 use super::super::delegate::RestGapDelegate;
-use super::super::state::{with_state, with_state_ref, Phase};
+use super::super::state::{Phase, with_state, with_state_ref};
 use super::super::timer::schedule_phase;
 use super::countdown::show_countdown_window;
 

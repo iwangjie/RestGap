@@ -2,10 +2,10 @@
 
 use std::time::{Duration, Instant};
 
-use objc2::{sel, MainThreadOnly};
+use objc2::{MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSBackingStoreType, NSColor, NSFont, NSScreen, NSStatusWindowLevel, NSTextField,
-    NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
+    NSBackingStoreType, NSColor, NSFont, NSScreen, NSStatusWindowLevel, NSTextField, NSWindow,
+    NSWindowCollectionBehavior, NSWindowStyleMask,
 };
 use objc2_core_foundation::CGFloat;
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString, NSTimer};

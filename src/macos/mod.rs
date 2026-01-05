@@ -15,9 +15,9 @@ pub mod timer;
 pub mod ui;
 pub mod utils;
 
+use objc2::MainThreadMarker;
 use objc2::rc::autoreleasepool;
 use objc2::runtime::ProtocolObject;
-use objc2::MainThreadMarker;
 
 use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy, NSApplicationDelegate};
 

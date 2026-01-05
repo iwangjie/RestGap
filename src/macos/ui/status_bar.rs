@@ -3,13 +3,13 @@
 use std::time::{Duration, Instant};
 
 use objc2::runtime::{AnyObject, ProtocolObject};
-use objc2::{sel, ClassType, MainThreadOnly};
+use objc2::{ClassType, MainThreadOnly, sel};
 use objc2_app_kit::{NSMenu, NSMenuDelegate, NSMenuItem, NSStatusBar, NSVariableStatusItemLength};
 use objc2_foundation::NSString;
 
 use super::super::constants::APP_NAME_ZH;
 use super::super::delegate::RestGapDelegate;
-use super::super::state::{with_state, with_state_ref, Phase};
+use super::super::state::{Phase, with_state, with_state_ref};
 use super::super::utils::{approx_duration, format_hhmm};
 
 /// 获取 delegate 的 AnyObject 引用

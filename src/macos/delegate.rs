@@ -4,12 +4,12 @@
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject};
-use objc2::{define_class, msg_send, MainThreadMarker, MainThreadOnly};
+use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
 
 use objc2_app_kit::{NSApplication, NSApplicationDelegate, NSMenu, NSMenuDelegate};
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSTimer};
 
-use super::state::{with_state, with_state_ref, Phase};
+use super::state::{Phase, with_state, with_state_ref};
 use super::timer::{schedule_phase, start_break_now, transition_on_timer};
 use super::ui::{
     close_countdown_window, finish_countdown, open_settings_dialog, refresh_header_title,
