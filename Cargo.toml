@@ -1,0 +1,61 @@
+[package]
+name = "restgap"
+version = "0.1.0"
+edition = "2024"
+
+[package.metadata.packager]
+product-name = "RestGap"
+description = "息间（RestGap）— macOS 菜单栏休息提醒（事件驱动 / 非轮询）。"
+identifier = "com.example.restgap"
+out-dir = "dist"
+binaries-dir = "target/release"
+binaries = [{ path = "restgap", main = true }]
+icons = ["assets/icons/macos/restgap.icns", "assets/icons/png/*.png"]
+before-packaging-command = "cargo build --release"
+
+[package.metadata.packager.macos]
+background-app = true
+
+[dependencies]
+objc2 = "0.6.3"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "NSAlert",
+    "NSApplication",
+    "NSButton",
+    "NSCell",
+    "NSColor",
+    "NSControl",
+    "NSFont",
+    "NSGraphics",
+    "NSMenu",
+    "NSMenuItem",
+    "NSResponder",
+    "NSRunningApplication",
+    "NSScreen",
+    "NSStatusBar",
+    "NSStatusItem",
+    "NSText",
+    "NSTextField",
+    "NSView",
+    "NSWindow",
+    "objc2-core-foundation",
+] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "NSGeometry",
+    "NSNotification",
+    "NSObject",
+    "NSString",
+    "NSTimer",
+    "NSUserDefaults",
+] }
+objc2-core-foundation = "0.3.2"
+libc = "0.2"
+
+[profile.release]
+opt-level = "z"      # 优化代码大小
+lto = true           # 开启链接时优化
+codegen-units = 1    # 牺牲编译速度换取更好的优化
+panic = "abort"      # 移除展开栈的代码，减小体积
+strip = true         # 剔除符号表
