@@ -33,8 +33,6 @@ cargo build --release
 
 After launch, it only shows a menu bar icon with countdown info. Menu items include: “Rest now / Settings / About / Quit”.
 
-Tip: `./start.sh`, `./stop.sh`, and `./status.sh` are provided for running it in the background while developing (they create local `.pid`/`.log` files in this repo).
-
 ## Configuration
 
 Menu bar → Settings → set “every N minutes, break for N seconds”. Settings are saved in `NSUserDefaults`.
