@@ -145,19 +145,26 @@ jobs:
 
       - name: Test binary runs
         run: |
-          $output = & .\target\release\restgap.exe --help 2>&1
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "Binary executed successfully"
-          } else {
-            # For console apps without --help, just check it starts
-            Write-Host "Testing basic execution..."
+          if (Test-Path ".\target\release\restgap.exe") {
+            Write-Host "✓ Binary built successfully"
+            Write-Host ""
+            Write-Host "Testing binary execution..."
             $job = Start-Job -ScriptBlock { 
               & $args[0]
             } -ArgumentList (Resolve-Path ".\target\release\restgap.exe")
             Start-Sleep -Seconds 2
-            Stop-Job $job
+            $state = $job.State
+            Stop-Job $job -ErrorAction SilentlyContinue
             Remove-Job $job
-            Write-Host "Binary can start successfully"
+            
+            if ($state -eq "Running") {
+              Write-Host "✓ Binary started and ran successfully (stopped after timeout)"
+            } else {
+              Write-Host "✓ Binary executed (state: $state)"
+            }
+          } else {
+            Write-Host "✗ Binary not found"
+            exit 1
           }
 
       - name: Upload artifact
@@ -193,11 +200,26 @@ jobs:
 
       - name: Test binary runs
         run: |
-          timeout 2 ./target/release/restgap || true
           if [ -f ./target/release/restgap ]; then
-            echo "Binary built successfully"
+            echo "✓ Binary built successfully"
             file ./target/release/restgap
+            echo ""
+            echo "Testing binary execution (2 second timeout)..."
+            timeout 2 ./target/release/restgap || exit_code=$?
+            if [ "${exit_code:-0}" -eq 124 ]; then
+              echo "✓ Binary started and ran (terminated by timeout as expected)"
+            elif [ "${exit_code:-0}" -eq 0 ]; then
+              echo "✓ Binary executed successfully"
+            else
+              echo "✗ Binary execution failed with exit code: ${exit_code}"
+              exit 1
+            fi
+            echo ""
+            echo "Checking dependencies..."
             ldd ./target/release/restgap || true
+          else
+            echo "✗ Binary not found"
+            exit 1
           fi
 
       - name: Upload artifact
