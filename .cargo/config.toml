@@ -1,0 +1,10 @@
+# Cargo configuration for cross-platform builds
+
+# Windows-specific configuration
+[target.x86_64-pc-windows-msvc]
+# Statically link the Windows CRT to avoid VCRUNTIME140.dll dependency
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.i686-pc-windows-msvc]
+# Statically link the Windows CRT for 32-bit builds
+rustflags = ["-C", "target-feature=+crt-static"]
