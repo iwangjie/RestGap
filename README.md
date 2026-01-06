@@ -2,27 +2,36 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-RestGap is a lightweight, event-driven macOS menu bar break reminder built in pure Rust (AppKit/Foundation via `objc2`). It aims for minimal CPU/memory usage while keeping breaks effective.
+RestGap is a lightweight, event-driven break reminder application built in pure Rust. It supports **macOS, Windows, and Linux** platforms with minimal CPU/memory usage while keeping breaks effective.
+
+## Platform Support
+
+- **macOS**: Full GUI support with menu bar integration using native AppKit APIs
+- **Windows**: Console-based implementation with core timer functionality
+- **Linux**: Console-based implementation with core timer functionality
 
 ## Tech Stack
 
 - Rust (Edition 2024)
-- AppKit/Foundation bindings: `objc2`, `objc2-app-kit`, `objc2-foundation`
-- Packaging: `cargo-packager` (+ `hdiutil` for `.dmg`)
+- **macOS**: AppKit/Foundation bindings via `objc2`, `objc2-app-kit`, `objc2-foundation`
+- **Windows/Linux**: Cross-platform configuration storage via `serde` and `dirs`
+- Packaging: `cargo-packager` (+ `hdiutil` for `.dmg` on macOS)
 
 ## Features
 
-- Pure Rust implementation (no Swift/ObjC code in this repo)
-- Universal packaging (Intel + Apple Silicon)
+- **Cross-platform**: Runs on macOS, Windows, and Linux
+- Pure Rust implementation
 - Configurable work interval & break duration
-- Break countdown window has no “skip” action (to encourage real breaks)
+- Break countdown (fullscreen on macOS, console on Windows/Linux)
 - No accounts, no telemetry, no network requests
-- No standalone config file (settings are stored in macOS user defaults via `NSUserDefaults`)
+- Configuration stored in platform-appropriate locations:
+  - **macOS**: `NSUserDefaults` (system preferences)
+  - **Windows/Linux**: JSON file in user config directory
 
 ## Requirements
 
-- macOS for full functionality
-- Other platforms: the binary prints a message and exits
+- **macOS**: For full GUI functionality with menu bar and break window
+- **Windows/Linux**: Basic console-based timer functionality
 
 ## Run
 
@@ -31,13 +40,21 @@ cargo build --release
 ./target/release/restgap
 ```
 
-After launch, it only shows a menu bar icon with countdown info. Menu items include: “Rest now / Settings / About / Quit”.
+**macOS**: After launch, it shows a menu bar icon with countdown info. Menu items include: "Rest now / Settings / About / Quit".
 
-Tip: `./start.sh`, `./stop.sh`, and `./status.sh` are provided for running it in the background while developing (they create local `.pid`/`.log` files in this repo).
+**Windows/Linux**: The application runs in the console and prints timer updates. It will automatically trigger breaks at configured intervals.
+
+Tip: On macOS, `./start.sh`, `./stop.sh`, and `./status.sh` are provided for running it in the background while developing (they create local `.pid`/`.log` files in this repo).
 
 ## Configuration
 
-Menu bar → Settings → set “every N minutes, break for N seconds”. Settings are saved in `NSUserDefaults`.
+**macOS**: Menu bar → Settings → set "every N minutes, break for N seconds". Settings are saved in `NSUserDefaults`.
+
+**Windows/Linux**: Edit the configuration file at:
+- Windows: `%APPDATA%\restgap\config.json`
+- Linux: `~/.config/restgap/config.json`
+
+Or modify `src/common/config.rs` constants and rebuild.
 
 - Defaults: 30 minutes / 120 seconds
 - Ranges: 1–240 minutes, 5–3600 seconds
@@ -51,8 +68,6 @@ cargo build --release
 The release profile is optimized for small size (`opt-level="z"`, `lto`, `codegen-units=1`, `panic=abort`, `strip`).
 
 ## Packaging (Cargo Packager)
-
-> Note: `restgap` only provides full functionality on macOS. The Windows build currently only prints “macOS only”.
 
 1) Install Cargo Packager:
 
@@ -82,6 +97,26 @@ cargo packager --release --formats default
 ```
 
 Packaging config lives in `Cargo.toml` under `[package.metadata.packager]`. Before distribution, change `identifier = "com.example.restgap"` to your own reverse-domain identifier.
+
+## Platform-Specific Notes
+
+### macOS
+- Provides full GUI functionality with native menu bar integration
+- Break countdown shows as a fullscreen window
+- Settings are stored in `NSUserDefaults`
+- Requires macOS 10.13+ (High Sierra or later)
+
+### Windows
+- Console-based implementation
+- Timer runs in the background and prints updates
+- Configuration stored in `%APPDATA%\restgap\config.json`
+- Future versions may add system tray support
+
+### Linux
+- Console-based implementation
+- Timer runs in the background and prints updates  
+- Configuration stored in `~/.config/restgap/config.json`
+- Future versions may add system tray support for desktop environments
 
 ## Contributing
 

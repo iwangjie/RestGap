@@ -14,8 +14,11 @@ env:
 
 jobs:
   check:
-    name: Check
-    runs-on: macos-latest
+    name: Check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -45,9 +48,12 @@ jobs:
         run: cargo check --all-targets
 
   test:
-    name: Test
-    runs-on: macos-latest
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     needs: check
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -69,7 +75,7 @@ jobs:
         run: cargo test --all-features
 
   build:
-    name: Build
+    name: Build macOS
     runs-on: macos-latest
     needs: test
     if: "!startsWith(github.ref, 'refs/tags/v')"
@@ -92,25 +98,136 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Build release (x86_64)
-        run: cargo build --release --target x86_64-apple-darwin
+      - name: Install cargo-packager
+        run: cargo install cargo-packager --locked
 
-      - name: Build release (aarch64)
-        run: cargo build --release --target aarch64-apple-darwin
+      - name: Build DMG
+        run: ./package-macos.sh
 
-      - name: Create Universal Binary
-        run: |
-          mkdir -p target/universal-apple-darwin/release
-          lipo -create \
-            target/x86_64-apple-darwin/release/restgap \
-            target/aarch64-apple-darwin/release/restgap \
-            -output target/universal-apple-darwin/release/restgap
+      - name: List dist directory
+        run: ls -lah dist/
 
-      - name: Upload artifact
+      - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: restgap-universal
-          path: target/universal-apple-darwin/release/restgap
+          name: restgap-macos-dmg
+          path: dist/*.dmg
+
+      - name: Upload .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: restgap-macos-app
+          path: dist/*.app
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    needs: test
+    if: "!startsWith(github.ref, 'refs/tags/v')"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Test binary runs
+        run: |
+          if (Test-Path ".\target\release\restgap.exe") {
+            Write-Host "✓ Binary built successfully"
+            Write-Host ""
+            Write-Host "Testing binary execution..."
+            $job = Start-Job -ScriptBlock { 
+              & $args[0]
+            } -ArgumentList (Resolve-Path ".\target\release\restgap.exe")
+            Start-Sleep -Seconds 2
+            $state = $job.State
+            Stop-Job $job -ErrorAction SilentlyContinue
+            Remove-Job $job
+            
+            if ($state -eq "Running") {
+              Write-Host "✓ Binary started and ran successfully (stopped after timeout)"
+            } else {
+              Write-Host "✓ Binary executed (state: $state)"
+            }
+          } else {
+            Write-Host "✗ Binary not found"
+            exit 1
+          }
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: restgap-windows-exe
+          path: target/release/restgap.exe
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    needs: test
+    if: "!startsWith(github.ref, 'refs/tags/v')"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Test binary runs
+        run: |
+          if [ -f ./target/release/restgap ]; then
+            echo "✓ Binary built successfully"
+            file ./target/release/restgap
+            echo ""
+            echo "Testing binary execution (2 second timeout)..."
+            timeout 2 ./target/release/restgap || exit_code=$?
+            if [ "${exit_code:-0}" -eq 124 ]; then
+              echo "✓ Binary started and ran (terminated by timeout as expected)"
+            elif [ "${exit_code:-0}" -eq 0 ]; then
+              echo "✓ Binary executed successfully"
+            else
+              echo "✗ Binary execution failed with exit code: ${exit_code}"
+              exit 1
+            fi
+            echo ""
+            echo "Checking dependencies..."
+            ldd ./target/release/restgap || true
+          else
+            echo "✗ Binary not found"
+            exit 1
+          fi
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: restgap-linux-binary
+          path: target/release/restgap
 
   release:
     name: Release

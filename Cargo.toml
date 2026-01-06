@@ -3,18 +3,18 @@ name = "restgap"
 version = "0.2.0"
 edition = "2024"
 authors = ["iwangjie <345127857@qq.com>"]
-description = "息间（RestGap）— macOS 菜单栏休息提醒（事件驱动 / 非轮询）"
+description = "息间（RestGap）— 跨平台休息提醒应用（macOS/Windows/Linux）"
 readme = "README.md"
 homepage = "https://github.com/iwangjie/restgap"
 repository = "https://github.com/iwangjie/restgap"
 license = "MIT"
-keywords = ["macos", "menubar", "rest", "reminder", "health"]
-categories = ["gui"]
+keywords = ["cross-platform", "break-reminder", "rest", "health", "timer"]
+categories = ["command-line-utilities"]
 rust-version = "1.85"
 
 [package.metadata.packager]
 product-name = "RestGap"
-description = "息间（RestGap）— macOS 菜单栏休息提醒（事件驱动 / 非轮询）。"
+description = "息间（RestGap）— 跨平台休息提醒应用（macOS/Windows/Linux）"
 identifier = "com.example.restgap"
 out-dir = "dist"
 binaries-dir = "target/release"
@@ -26,6 +26,13 @@ before-packaging-command = "cargo build --release"
 background-app = true
 
 [dependencies]
+# Cross-platform dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+dirs = "5.0"
+
+# macOS-specific dependencies
+[target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6.3"
 objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "std",
