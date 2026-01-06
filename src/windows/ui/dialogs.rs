@@ -16,13 +16,14 @@ use super::countdown::show_countdown_window;
 use crate::common::Config;
 
 /// 显示无效配置警告
+#[allow(dead_code)]
 pub fn show_invalid_settings_alert(hwnd: Option<HWND>) {
     let title = to_wide_string("配置无效");
     let message = to_wide_string("请输入有效的数字：每 N 分钟休息 N 秒。");
 
     unsafe {
         let _ = MessageBoxW(
-            hwnd.unwrap_or(HWND::default()),
+            hwnd.unwrap_or_default(),
             PCWSTR(message.as_ptr()),
             PCWSTR(title.as_ptr()),
             MB_OK | MB_ICONINFORMATION,
@@ -32,8 +33,8 @@ pub fn show_invalid_settings_alert(hwnd: Option<HWND>) {
 
 /// 打开配置对话框
 ///
-/// 由于 Windows API 创建自定义对话框比较复杂，这里使用简单的 InputBox 方式
-/// 通过两次 MessageBox 输入来获取配置
+/// 由于 Windows API 创建自定义对话框比较复杂，这里使用简单的 `InputBox` 方式
+/// 通过两次 `MessageBox` 输入来获取配置
 pub fn open_settings_dialog(hwnd: Option<HWND>) {
     let current = with_state_ref(|s| s.config.clone());
 
@@ -48,7 +49,7 @@ pub fn open_settings_dialog(hwnd: Option<HWND>) {
 
     let result = unsafe {
         MessageBoxW(
-            hwnd.unwrap_or(HWND::default()),
+            hwnd.unwrap_or_default(),
             PCWSTR(message.as_ptr()),
             PCWSTR(title.as_ptr()),
             MB_YESNO | MB_ICONINFORMATION,
@@ -61,7 +62,7 @@ pub fn open_settings_dialog(hwnd: Option<HWND>) {
             interval_minutes: 30,
             break_seconds: 120,
         };
-        new_config.save();
+        let _ = new_config.save();
 
         let phase = with_state(|state| {
             state.config = new_config.clone();
@@ -89,7 +90,7 @@ pub fn show_about_dialog(hwnd: Option<HWND>) {
 
     let result = unsafe {
         MessageBoxW(
-            hwnd.unwrap_or(HWND::default()),
+            hwnd.unwrap_or_default(),
             PCWSTR(message.as_ptr()),
             PCWSTR(title.as_ptr()),
             MB_YESNO | MB_ICONINFORMATION,

@@ -31,7 +31,8 @@ pub fn schedule_phase(phase: Phase) {
         state.phase_deadline_mono = Some(Instant::now() + duration);
         state.phase_deadline_wall = Some(SystemTime::now() + duration);
 
-        let duration_ms = duration.as_millis() as u32;
+        #[allow(clippy::cast_possible_truncation)]
+        let duration_ms = duration.as_millis().min(u32::MAX as u128) as u32;
         (state.main_hwnd, duration_ms)
     });
 

@@ -112,6 +112,7 @@ pub fn setup_tray_icon(hwnd: HWND) {
     }
 
     // 创建托盘图标数据
+    #[allow(clippy::cast_possible_truncation)]
     let nid = NOTIFYICONDATAW {
         cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
         hWnd: hwnd,
@@ -125,7 +126,7 @@ pub fn setup_tray_icon(hwnd: HWND) {
 
     // 添加托盘图标
     unsafe {
-        let _ = Shell_NotifyIconW(NIM_ADD, &nid);
+        let _ = Shell_NotifyIconW(NIM_ADD, &raw const nid);
     }
 
     // 保存状态
@@ -149,10 +150,10 @@ fn load_tray_icon() -> windows::Win32::UI::WindowsAndMessaging::HICON {
             16,
             LR_SHARED,
         );
-        match icon {
-            Ok(h) => windows::Win32::UI::WindowsAndMessaging::HICON(h.0),
-            Err(_) => windows::Win32::UI::WindowsAndMessaging::HICON::default(),
-        }
+        icon.map_or_else(
+            |_| windows::Win32::UI::WindowsAndMessaging::HICON::default(),
+            |h| windows::Win32::UI::WindowsAndMessaging::HICON(h.0),
+        )
     }
 }
 
@@ -166,7 +167,7 @@ pub fn show_tray_menu(hwnd: HWND) {
 
     let mut pt = windows::Win32::Foundation::POINT::default();
     unsafe {
-        let _ = GetCursorPos(&mut pt);
+        let _ = GetCursorPos(&raw mut pt);
         // 必须先调用 SetForegroundWindow，否则菜单不会在点击其他地方时消失
         let _ = SetForegroundWindow(hwnd);
         let _ = TrackPopupMenu(
@@ -227,7 +228,7 @@ pub fn set_rest_now_enabled(enabled: bool) {
             } else {
                 MF_BYCOMMAND | MF_DISABLED | MF_GRAYED
             };
-            let _ = EnableMenuItem(menu, ID_MENU_REST_NOW as u32, flags);
+            let _ = EnableMenuItem(menu, u32::from(ID_MENU_REST_NOW), flags);
         }
     });
 }
@@ -285,7 +286,7 @@ pub fn refresh_menu_info() {
             let next_wide = to_wide_string(&next_title);
             let _ = ModifyMenuW(
                 menu,
-                ID_MENU_NEXT_BREAK as u32,
+                u32::from(ID_MENU_NEXT_BREAK),
                 MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED,
                 ID_MENU_NEXT_BREAK as usize,
                 PCWSTR(next_wide.as_ptr()),
@@ -294,7 +295,7 @@ pub fn refresh_menu_info() {
             let remaining_wide = to_wide_string(&remaining_title);
             let _ = ModifyMenuW(
                 menu,
-                ID_MENU_REMAINING as u32,
+                u32::from(ID_MENU_REMAINING),
                 MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED,
                 ID_MENU_REMAINING as usize,
                 PCWSTR(remaining_wide.as_ptr()),
@@ -319,7 +320,7 @@ pub fn refresh_header_title() {
             let title_wide = to_wide_string(&title);
             let _ = ModifyMenuW(
                 menu,
-                ID_MENU_HEADER as u32,
+                u32::from(ID_MENU_HEADER),
                 MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED,
                 ID_MENU_HEADER as usize,
                 PCWSTR(title_wide.as_ptr()),

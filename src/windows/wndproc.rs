@@ -38,6 +38,7 @@ pub unsafe extern "system" fn main_wndproc(
         }
         WM_TRAY_CALLBACK => {
             // 托盘图标消息
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let event = lparam.0 as u32;
             match event {
                 // WM_RBUTTONUP - 右键点击
@@ -54,6 +55,7 @@ pub unsafe extern "system" fn main_wndproc(
             LRESULT(0)
         }
         WM_COMMAND => {
+            #[allow(clippy::cast_possible_truncation)]
             let menu_id = (wparam.0 & 0xFFFF) as u16;
             match menu_id {
                 ID_MENU_REST_NOW => {

@@ -48,15 +48,11 @@ pub fn run() {
         ..Default::default()
     };
 
-    let atom = unsafe { RegisterClassW(&wc) };
-    if atom == 0 {
-        panic!("Failed to register main window class");
-    }
+    let atom = unsafe { RegisterClassW(&raw const wc) };
+    assert!(atom != 0, "Failed to register main window class");
 
     // 注册倒计时窗口类
-    if !register_countdown_class() {
-        panic!("Failed to register countdown window class");
-    }
+    assert!(register_countdown_class(), "Failed to register countdown window class");
 
     // 创建隐藏的主窗口（用于接收消息）
     let hwnd = unsafe {
@@ -83,9 +79,9 @@ pub fn run() {
     // 消息循环
     let mut msg = MSG::default();
     unsafe {
-        while GetMessageW(&mut msg, HWND::default(), 0, 0).as_bool() {
-            let _ = TranslateMessage(&msg);
-            DispatchMessageW(&msg);
+        while GetMessageW(&raw mut msg, HWND::default(), 0, 0).as_bool() {
+            let _ = TranslateMessage(&raw const msg);
+            DispatchMessageW(&raw const msg);
         }
     }
 }

@@ -21,7 +21,7 @@ use super::super::state::with_state;
 use super::super::utils::{SoundType, format_countdown, play_sound, to_wide_string};
 
 /// 倒计时窗口过程
-#[allow(unsafe_op_in_unsafe_fn)]
+#[allow(unsafe_op_in_unsafe_fn, clippy::too_many_lines)]
 pub unsafe extern "system" fn countdown_wndproc(
     hwnd: HWND,
     msg: u32,
@@ -31,14 +31,14 @@ pub unsafe extern "system" fn countdown_wndproc(
     match msg {
         WM_PAINT => {
             let mut ps = PAINTSTRUCT::default();
-            let hdc = BeginPaint(hwnd, &mut ps);
+            let hdc = BeginPaint(hwnd, &raw mut ps);
 
             let mut rect = RECT::default();
-            let _ = GetClientRect(hwnd, &mut rect);
+            let _ = GetClientRect(hwnd, &raw mut rect);
 
             // 填充背景
             let brush = GetStockObject(WHITE_BRUSH);
-            FillRect(hdc, &rect, HBRUSH(brush.0));
+            FillRect(hdc, &raw const rect, HBRUSH(brush.0));
 
             // 设置文本属性
             let _ = SetBkMode(hdc, TRANSPARENT);
@@ -46,9 +46,9 @@ pub unsafe extern "system" fn countdown_wndproc(
 
             // 获取倒计时文本
             let countdown_text = with_state(|state| {
-                state
-                    .countdown_end_time
-                    .map(|end_time| {
+                state.countdown_end_time.map_or_else(
+                    || "00:00".to_string(),
+                    |end_time| {
                         let now = Instant::now();
                         if now >= end_time {
                             "00:00".to_string()
@@ -56,8 +56,8 @@ pub unsafe extern "system" fn countdown_wndproc(
                             let remaining = end_time.duration_since(now);
                             format_countdown(remaining.as_secs())
                         }
-                    })
-                    .unwrap_or_else(|| "00:00".to_string())
+                    },
+                )
             });
 
             // 绘制标题
@@ -81,6 +81,7 @@ pub unsafe extern "system" fn countdown_wndproc(
             );
             let old_font = SelectObject(hdc, title_font);
             let title_y = rect.bottom / 2 - 100;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             let title_x = (rect.right - (title.chars().count() as i32 * 24)) / 2;
             let _ = TextOutW(hdc, title_x, title_y, &title_wide[..title_wide.len() - 1]);
 
@@ -104,6 +105,7 @@ pub unsafe extern "system" fn countdown_wndproc(
             );
             let _ = SelectObject(hdc, countdown_font);
             let countdown_y = rect.bottom / 2 - 30;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             let countdown_x = (rect.right - (countdown_text.chars().count() as i32 * 48)) / 2;
             let _ = TextOutW(
                 hdc,
@@ -134,6 +136,7 @@ pub unsafe extern "system" fn countdown_wndproc(
             let _ = SelectObject(hdc, hint_font);
             let _ = SetTextColor(hdc, COLORREF(0x0080_8080)); // 灰色
             let hint_y = rect.bottom / 2 + 80;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             let hint_x = (rect.right - (hint.chars().count() as i32 * 16)) / 2;
             let _ = TextOutW(hdc, hint_x, hint_y, &hint_wide[..hint_wide.len() - 1]);
 
@@ -158,6 +161,7 @@ pub unsafe extern "system" fn countdown_wndproc(
             );
             let _ = SelectObject(hdc, skip_font);
             let skip_y = rect.bottom / 2 + 140;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             let skip_x = (rect.right - (skip_hint.chars().count() as i32 * 12)) / 2;
             let _ = TextOutW(hdc, skip_x, skip_y, &skip_wide[..skip_wide.len() - 1]);
 
@@ -168,17 +172,17 @@ pub unsafe extern "system" fn countdown_wndproc(
             let _ = DeleteObject(hint_font);
             let _ = DeleteObject(skip_font);
 
-            let _ = EndPaint(hwnd, &ps);
+            let _ = EndPaint(hwnd, &raw const ps);
             LRESULT(0)
         }
         WM_TIMER => {
             if wparam.0 == COUNTDOWN_TIMER_ID {
-                if !update_countdown() {
-                    // 倒计时结束
-                    finish_countdown();
-                } else {
+                if update_countdown() {
                     // 刷新窗口
                     let _ = InvalidateRect(hwnd, None, true);
+                } else {
+                    // 倒计时结束
+                    finish_countdown();
                 }
             }
             LRESULT(0)
@@ -213,7 +217,7 @@ pub fn register_countdown_class() -> bool {
         ..Default::default()
     };
 
-    unsafe { RegisterClassW(&wc) != 0 }
+    unsafe { RegisterClassW(&raw const wc) != 0 }
 }
 
 /// 显示倒计时窗口
