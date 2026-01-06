@@ -142,10 +142,8 @@ fn load_tray_icon() -> windows::Win32::UI::WindowsAndMessaging::HICON {
     // 使用稳定的系统默认图标，避免因资源加载失败导致托盘图标缺失。
     // 需要更换为应用图标时，建议通过资源文件（.rc）或在安装包中提供 .ico。
     unsafe {
-        LoadIconW(None, IDI_APPLICATION).map_or_else(
-            |_| windows::Win32::UI::WindowsAndMessaging::HICON::default(),
-            |h| h,
-        )
+        LoadIconW(None, IDI_APPLICATION)
+            .unwrap_or_else(|_| windows::Win32::UI::WindowsAndMessaging::HICON::default())
     }
 }
 

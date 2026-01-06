@@ -68,7 +68,7 @@ fn on_countdown_char(ch: char) -> bool {
     })
 }
 
-fn clamp_i32(v: i32, min: i32, max: i32) -> i32 {
+const fn clamp_i32(v: i32, min: i32, max: i32) -> i32 {
     if v < min {
         min
     } else if v > max {
@@ -78,7 +78,7 @@ fn clamp_i32(v: i32, min: i32, max: i32) -> i32 {
     }
 }
 
-fn line_rect(full: &RECT, center_y: i32, line_height: i32) -> RECT {
+const fn line_rect(full: &RECT, center_y: i32, line_height: i32) -> RECT {
     let top = center_y - (line_height / 2);
     let bottom = center_y + (line_height / 2);
     RECT {
