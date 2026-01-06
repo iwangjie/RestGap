@@ -229,13 +229,11 @@ jobs:
           name: restgap-linux-binary
           path: target/release/restgap
 
-  release:
-    name: Release
+  release-macos:
+    name: Release macOS
     runs-on: macos-latest
     needs: test
     if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -252,6 +250,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin, aarch64-apple-darwin
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -264,8 +264,121 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Install cargo-packager
+        run: cargo install cargo-packager --locked
+
       - name: Build .dmg
         run: ./package-macos.sh
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-dmg
+          path: dist/*.dmg
+
+  release-windows:
+    name: Release Windows
+    runs-on: windows-latest
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Get version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"' | ForEach-Object { $_.Matches.Groups[1].Value })
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Prepare release artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Copy-Item target/release/restgap.exe dist/RestGap_${{ steps.version.outputs.VERSION }}_windows_x64.exe
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-exe
+          path: dist/*.exe
+
+  release-linux:
+    name: Release Linux
+    runs-on: ubuntu-latest
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(awk -F '"' '/^version =/ {print $2; exit}' Cargo.toml)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Prepare release artifact
+        run: |
+          mkdir -p dist
+          cp target/release/restgap dist/RestGap_${{ steps.version.outputs.VERSION }}_linux_x64
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-binary
+          path: dist/RestGap_*
+
+  publish-release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: [release-macos, release-windows, release-linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
 
       - name: Publish GitHub Release
         env:
@@ -274,10 +387,18 @@ jobs:
           set -euo pipefail
 
           tag="${GITHUB_REF_NAME}"
-          dmg="$(ls -1 dist/*.dmg | head -n 1)"
 
+          # Collect all release files
+          mkdir -p release-files
+          find artifacts -type f \( -name "*.dmg" -o -name "*.exe" -o -name "RestGap_*" \) -exec cp {} release-files/ \;
+
+          ls -la release-files/
+
+          # Create or update release
           if gh release view "${tag}" >/dev/null 2>&1; then
-            gh release upload "${tag}" "${dmg}" --clobber
+            for file in release-files/*; do
+              gh release upload "${tag}" "${file}" --clobber
+            done
           else
-            gh release create "${tag}" "${dmg}" --title "${tag}" --generate-notes
+            gh release create "${tag}" release-files/* --title "${tag}" --generate-notes
           fi
