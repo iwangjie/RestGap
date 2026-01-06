@@ -1,4 +1,5 @@
 # RestGap (息间)
+<img width="150" height="150" alt="original" src="https://github.com/user-attachments/assets/e26b58e8-2f76-43c6-9dbd-36b507d1e0a9" />
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
@@ -32,6 +33,15 @@ RestGap is a lightweight, event-driven break reminder application built in pure 
 
 - **macOS**: For full GUI functionality with menu bar and break window
 - **Windows/Linux**: Basic console-based timer functionality
+
+## Screenshot
+
+<img width="352" height="298" alt="image" src="https://github.com/user-attachments/assets/930ac760-fb87-4452-9200-2848ecb9cbf4" />
+
+<img width="352" height="298" alt="image" src="https://github.com/user-attachments/assets/764e9c38-3561-4144-af0c-c36a5fd96699" />
+
+<img width="2880" height="1800" alt="3214f6f2fa29810e5c37aaff6790a49b" src="https://github.com/user-attachments/assets/eae4781b-d4d8-49d4-9bfb-ba8809786381" />
+
 
 ## Run
 
