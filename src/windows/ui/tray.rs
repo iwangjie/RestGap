@@ -8,9 +8,9 @@ use windows::Win32::UI::Shell::{
     Shell_NotifyIconW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, HMENU, IMAGE_ICON, LR_SHARED,
-    LoadImageW, MF_DISABLED, MF_GRAYED, MF_SEPARATOR, MF_STRING, SetForegroundWindow,
-    TPM_BOTTOMALIGN, TPM_LEFTALIGN, TrackPopupMenu,
+    AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, IMAGE_ICON, LR_SHARED, LoadImageW,
+    MF_DISABLED, MF_GRAYED, MF_SEPARATOR, MF_STRING, SetForegroundWindow, TPM_BOTTOMALIGN,
+    TPM_LEFTALIGN, TrackPopupMenu,
 };
 use windows::core::PCWSTR;
 
@@ -112,7 +112,7 @@ pub fn setup_tray_icon(hwnd: HWND) {
     }
 
     // 创建托盘图标数据
-    let mut nid = NOTIFYICONDATAW {
+    let nid = NOTIFYICONDATAW {
         cbSize: std::mem::size_of::<NOTIFYICONDATAW>() as u32,
         hWnd: hwnd,
         uID: TRAY_ICON_ID,

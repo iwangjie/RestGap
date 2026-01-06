@@ -4,7 +4,7 @@ use std::process::Command;
 
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::{
-    IDNO, IDYES, MB_ICONINFORMATION, MB_OK, MB_YESNO, MessageBoxW,
+    IDYES, MB_ICONINFORMATION, MB_OK, MB_YESNO, MessageBoxW,
 };
 use windows::core::PCWSTR;
 

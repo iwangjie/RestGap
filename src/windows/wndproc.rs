@@ -9,12 +9,13 @@ use super::constants::{
     ID_MENU_ABOUT, ID_MENU_QUIT, ID_MENU_REST_NOW, ID_MENU_SETTINGS, PHASE_TIMER_ID,
     WM_TRAY_CALLBACK,
 };
-use super::state::{Phase, with_state};
+use super::state::Phase;
 use super::timer::{schedule_phase, start_break_now, transition_on_timer};
 use super::ui::dialogs::{open_settings_dialog, show_about_dialog};
 use super::ui::tray::{remove_tray_icon, setup_tray_icon, show_tray_menu};
 
 /// 主窗口过程
+#[allow(unsafe_op_in_unsafe_fn)]
 pub unsafe extern "system" fn main_wndproc(
     hwnd: HWND,
     msg: u32,

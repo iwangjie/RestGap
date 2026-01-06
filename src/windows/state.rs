@@ -26,7 +26,6 @@ pub enum NotifyEvent {
 }
 
 /// 应用状态
-#[derive(Debug)]
 pub struct AppState {
     pub config: Config,
     pub phase: Phase,

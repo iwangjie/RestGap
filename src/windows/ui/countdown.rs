@@ -2,10 +2,11 @@
 
 use std::time::{Duration, Instant};
 
-use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
+use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    BeginPaint, CreateFontW, DeleteObject, EndPaint, FillRect, GetStockObject, HBRUSH, PAINTSTRUCT,
-    SelectObject, SetBkMode, SetTextColor, TRANSPARENT, TextOutW, WHITE_BRUSH,
+    BeginPaint, CreateFontW, DeleteObject, EndPaint, FillRect, GetStockObject, HBRUSH,
+    InvalidateRect, PAINTSTRUCT, SelectObject, SetBkMode, SetTextColor, TRANSPARENT, TextOutW,
+    WHITE_BRUSH,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, GetClientRect, GetSystemMetrics, HWND_TOPMOST,
@@ -20,6 +21,7 @@ use super::super::state::with_state;
 use super::super::utils::{SoundType, format_countdown, play_sound, to_wide_string};
 
 /// 倒计时窗口过程
+#[allow(unsafe_op_in_unsafe_fn)]
 pub unsafe extern "system" fn countdown_wndproc(
     hwnd: HWND,
     msg: u32,
@@ -40,7 +42,7 @@ pub unsafe extern "system" fn countdown_wndproc(
 
             // 设置文本属性
             let _ = SetBkMode(hdc, TRANSPARENT);
-            let _ = SetTextColor(hdc, 0x00000000); // 黑色
+            let _ = SetTextColor(hdc, COLORREF(0x0000_0000)); // 黑色
 
             // 获取倒计时文本
             let countdown_text = with_state(|state| {
@@ -130,7 +132,7 @@ pub unsafe extern "system" fn countdown_wndproc(
                 windows::core::w!("Microsoft YaHei"),
             );
             let _ = SelectObject(hdc, hint_font);
-            let _ = SetTextColor(hdc, 0x00808080); // 灰色
+            let _ = SetTextColor(hdc, COLORREF(0x0080_8080)); // 灰色
             let hint_y = rect.bottom / 2 + 80;
             let hint_x = (rect.right - (hint.chars().count() as i32 * 16)) / 2;
             let _ = TextOutW(hdc, hint_x, hint_y, &hint_wide[..hint_wide.len() - 1]);
@@ -176,7 +178,7 @@ pub unsafe extern "system" fn countdown_wndproc(
                     finish_countdown();
                 } else {
                     // 刷新窗口
-                    let _ = windows::Win32::Graphics::Gdi::InvalidateRect(hwnd, None, true);
+                    let _ = InvalidateRect(hwnd, None, true);
                 }
             }
             LRESULT(0)

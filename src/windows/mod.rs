@@ -12,12 +12,12 @@ pub mod ui;
 pub mod utils;
 pub mod wndproc;
 
-use windows::Win32::Foundation::HWND;
-use windows::Win32::Graphics::Gdi::HBRUSH;
+use windows::Win32::Foundation::{HINSTANCE, HWND};
+use windows::Win32::Graphics::Gdi::{GetStockObject, HBRUSH, WHITE_BRUSH};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DispatchMessageW, GetMessageW, GetStockObject, MSG, RegisterClassW,
-    TranslateMessage, WHITE_BRUSH, WNDCLASSW, WS_EX_TOOLWINDOW, WS_OVERLAPPEDWINDOW,
+    CreateWindowExW, DispatchMessageW, GetMessageW, MSG, RegisterClassW, TranslateMessage,
+    WNDCLASSW, WS_EX_TOOLWINDOW, WS_OVERLAPPEDWINDOW,
 };
 use windows::core::PCWSTR;
 
@@ -35,13 +35,14 @@ pub fn run() {
     init_state(config);
 
     // 获取模块句柄
-    let hinstance = unsafe { GetModuleHandleW(None) }.expect("Failed to get module handle");
+    let hmodule = unsafe { GetModuleHandleW(None) }.expect("Failed to get module handle");
+    let hinstance = HINSTANCE(hmodule.0);
 
     // 注册主窗口类
     let class_name = to_wide_string(MAIN_WINDOW_CLASS);
     let wc = WNDCLASSW {
         lpfnWndProc: Some(main_wndproc),
-        hInstance: hinstance.into(),
+        hInstance: hinstance,
         lpszClassName: PCWSTR(class_name.as_ptr()),
         hbrBackground: unsafe { HBRUSH(GetStockObject(WHITE_BRUSH).0) },
         ..Default::default()
@@ -70,7 +71,7 @@ pub fn run() {
             0,
             None,
             None,
-            Some(hinstance.into()),
+            Some(hinstance),
             None,
         )
     };
