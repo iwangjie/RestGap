@@ -1,114 +1,90 @@
-//! Windows platform implementation
+//! Windows 平台模块
 //!
-//! This is a basic implementation that provides the core functionality
-//! for Windows using cross-platform libraries.
-//!
-//! Note: The timer logic is intentionally duplicated between Windows and Linux
-//! implementations to keep platform-specific code isolated. This makes it easier
-//! to add platform-specific features in the future (e.g., system tray on Windows,
-//! desktop notifications on Linux) without affecting the other platforms.
+//! 包含所有 Windows 特定的实现。
+//! 使用 windows-rs 直接调用 Windows API，实现原生 GUI 应用。
 
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::{Duration, Instant};
+#![allow(unsafe_code)] // Windows API 调用需要 unsafe
+
+pub mod constants;
+pub mod state;
+pub mod timer;
+pub mod ui;
+pub mod utils;
+pub mod wndproc;
+
+use windows::Win32::Foundation::{HINSTANCE, HWND};
+use windows::Win32::Graphics::Gdi::{GetStockObject, HBRUSH, WHITE_BRUSH};
+use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::UI::WindowsAndMessaging::{
+    CreateWindowExW, DispatchMessageW, GetMessageW, MSG, RegisterClassW, TranslateMessage,
+    WNDCLASSW, WS_EX_TOOLWINDOW, WS_OVERLAPPEDWINDOW,
+};
+use windows::core::PCWSTR;
 
 use crate::common::Config;
+use constants::MAIN_WINDOW_CLASS;
+use state::init_state;
+use ui::countdown::register_countdown_class;
+use utils::to_wide_string;
+use wndproc::main_wndproc;
 
-/// Application state for Windows
-struct AppState {
-    config: Config,
-    work_start: Instant,
-    is_breaking: bool,
-    break_start: Option<Instant>,
-}
-
-impl AppState {
-    fn new(config: Config) -> Self {
-        Self {
-            config,
-            work_start: Instant::now(),
-            is_breaking: false,
-            break_start: None,
-        }
-    }
-
-    fn time_until_break(&self) -> Duration {
-        let elapsed = self.work_start.elapsed();
-        let work_duration = Duration::from_secs(self.config.interval_minutes * 60);
-        work_duration.saturating_sub(elapsed)
-    }
-
-    fn break_time_remaining(&self) -> Duration {
-        self.break_start.map_or(Duration::ZERO, |break_start| {
-            let elapsed = break_start.elapsed();
-            let break_duration = Duration::from_secs(self.config.break_seconds);
-            break_duration.saturating_sub(elapsed)
-        })
-    }
-}
-
-/// Run the Windows application
+/// 运行应用
 pub fn run() {
-    println!("息间 (RestGap) - Windows 版本");
-    println!("RestGap - Windows Version");
-    println!("==============================");
-
+    // 加载配置
     let config = Config::load();
-    println!("配置已加载 / Configuration loaded:");
-    println!(
-        "  工作间隔 / Work interval: {} 分钟 / minutes",
-        config.interval_minutes
+    init_state(config);
+
+    // 获取模块句柄
+    let hmodule = unsafe { GetModuleHandleW(None) }.expect("Failed to get module handle");
+    let hinstance = HINSTANCE(hmodule.0);
+
+    // 注册主窗口类
+    let class_name = to_wide_string(MAIN_WINDOW_CLASS);
+    let wc = WNDCLASSW {
+        lpfnWndProc: Some(main_wndproc),
+        hInstance: hinstance,
+        lpszClassName: PCWSTR(class_name.as_ptr()),
+        hbrBackground: unsafe { HBRUSH(GetStockObject(WHITE_BRUSH).0) },
+        ..Default::default()
+    };
+
+    let atom = unsafe { RegisterClassW(&raw const wc) };
+    assert!(atom != 0, "Failed to register main window class");
+
+    // 注册倒计时窗口类
+    assert!(
+        register_countdown_class(),
+        "Failed to register countdown window class"
     );
-    println!(
-        "  休息时长 / Break duration: {} 秒 / seconds",
-        config.break_seconds
-    );
-    println!();
 
-    let state = Arc::new(Mutex::new(AppState::new(config)));
+    // 创建隐藏的主窗口（用于接收消息）
+    let hwnd = unsafe {
+        CreateWindowExW(
+            WS_EX_TOOLWINDOW, // 不显示在任务栏
+            PCWSTR(class_name.as_ptr()),
+            PCWSTR::null(),
+            WS_OVERLAPPEDWINDOW, // 不显示窗口
+            0,
+            0,
+            0,
+            0,
+            None,
+            None,
+            hinstance,
+            None,
+        )
+    };
 
-    println!("应用已启动，按 Ctrl+C 退出");
-    println!("Application started, press Ctrl+C to exit");
-    println!();
+    let Ok(_hwnd) = hwnd else {
+        panic!("Failed to create main window");
+    };
 
-    // Main loop to manage work/break cycles
-    loop {
-        thread::sleep(Duration::from_secs(1));
-
-        let mut state = state.lock().expect("Failed to lock state mutex");
-
-        if state.is_breaking {
-            let remaining = state.break_time_remaining();
-            if remaining == Duration::ZERO {
-                // Break is over
-                state.is_breaking = false;
-                state.break_start = None;
-                state.work_start = Instant::now();
-                println!("\n✅ 休息结束，开始工作！");
-                println!("✅ Break over, back to work!\n");
-            } else if remaining.as_secs() % 10 == 0 {
-                // Print countdown every 10 seconds during break
-                let secs = remaining.as_secs();
-                println!("☕ 休息倒计时: {secs} 秒 / Break countdown: {secs} seconds");
-            }
-        } else {
-            let remaining = state.time_until_break();
-            if remaining == Duration::ZERO {
-                // Time for a break!
-                state.is_breaking = true;
-                state.break_start = Some(Instant::now());
-                let break_secs = state.config.break_seconds;
-                println!("\n🔔 休息时间！请休息 {break_secs} 秒");
-                println!("🔔 Break time! Please rest for {break_secs} seconds\n");
-
-                // In a full implementation, this would show a fullscreen window
-                // For now, we just print to console
-            } else if remaining.as_secs() % 60 == 0 && remaining.as_secs() > 0 {
-                // Print update every minute
-                let minutes = remaining.as_secs() / 60;
-                println!("⏰ 距离下次休息还有 {minutes} 分钟 / {minutes} minutes until next break");
-            }
+    // 消息循环
+    let mut msg = MSG::default();
+    unsafe {
+        while GetMessageW(&raw mut msg, HWND::default(), 0, 0).as_bool() {
+            let _ = TranslateMessage(&raw const msg);
+            DispatchMessageW(&raw const msg);
         }
-        drop(state);
     }
 }
