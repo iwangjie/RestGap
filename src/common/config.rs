@@ -77,12 +77,14 @@ impl Config {
     }
 
     /// Get work interval as Duration
-    pub fn work_interval(&self) -> std::time::Duration {
+    #[allow(dead_code)]
+    pub const fn work_interval(&self) -> std::time::Duration {
         std::time::Duration::from_secs(self.interval_minutes * 60)
     }
 
     /// Get break duration as Duration
-    pub fn break_duration(&self) -> std::time::Duration {
+    #[allow(dead_code)]
+    pub const fn break_duration(&self) -> std::time::Duration {
         std::time::Duration::from_secs(self.break_seconds)
     }
 }
