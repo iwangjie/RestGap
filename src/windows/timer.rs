@@ -32,7 +32,7 @@ pub fn schedule_phase(phase: Phase) {
         state.phase_deadline_wall = Some(SystemTime::now() + duration);
 
         #[allow(clippy::cast_possible_truncation)]
-        let duration_ms = duration.as_millis().min(u32::MAX as u128) as u32;
+        let duration_ms = duration.as_millis().min(u128::from(u32::MAX)) as u32;
         (state.main_hwnd, duration_ms)
     });
 
