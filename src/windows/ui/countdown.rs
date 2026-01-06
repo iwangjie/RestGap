@@ -143,7 +143,7 @@ pub unsafe extern "system" fn countdown_wndproc(
 
             // 绘制标题（自动居中，避免 DPI/字体导致的错位）
             let title = format!("{APP_NAME_ZH} · 休息倒计时");
-            let title_wide = to_wide_string(&title);
+            let mut title_wide: Vec<u16> = title.encode_utf16().collect();
             let title_font = CreateFontW(
                 -title_px,
                 0,
@@ -164,14 +164,13 @@ pub unsafe extern "system" fn countdown_wndproc(
             let mut title_rect = line_rect(&rect, title_center_y, title_px * 2);
             let _ = DrawTextW(
                 hdc,
-                PCWSTR(title_wide.as_ptr()),
-                -1,
+                &mut title_wide,
                 &raw mut title_rect,
                 DT_CENTER | DT_VCENTER | DT_SINGLELINE,
             );
 
             // 绘制倒计时数字
-            let countdown_wide = to_wide_string(&countdown_text);
+            let mut countdown_wide: Vec<u16> = countdown_text.encode_utf16().collect();
             let countdown_font = CreateFontW(
                 -countdown_px,
                 0,
@@ -192,15 +191,14 @@ pub unsafe extern "system" fn countdown_wndproc(
             let mut countdown_rect = line_rect(&rect, countdown_center_y, countdown_px * 2);
             let _ = DrawTextW(
                 hdc,
-                PCWSTR(countdown_wide.as_ptr()),
-                -1,
+                &mut countdown_wide,
                 &raw mut countdown_rect,
                 DT_CENTER | DT_VCENTER | DT_SINGLELINE,
             );
 
             // 绘制提示文本
             let hint = "放松眼睛，伸展身体";
-            let hint_wide = to_wide_string(hint);
+            let mut hint_wide: Vec<u16> = hint.encode_utf16().collect();
             let hint_font = CreateFontW(
                 -hint_px,
                 0,
@@ -222,8 +220,7 @@ pub unsafe extern "system" fn countdown_wndproc(
             let mut hint_rect = line_rect(&rect, hint_center_y, hint_px * 2);
             let _ = DrawTextW(
                 hdc,
-                PCWSTR(hint_wide.as_ptr()),
-                -1,
+                &mut hint_wide,
                 &raw mut hint_rect,
                 DT_CENTER | DT_VCENTER | DT_SINGLELINE,
             );
