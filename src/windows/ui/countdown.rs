@@ -4,16 +4,16 @@ use std::time::{Duration, Instant};
 
 use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    BeginPaint, CreateFontW, DeleteObject, EndPaint, FillRect, GetStockObject, HBRUSH,
-    InvalidateRect, PAINTSTRUCT, SelectObject, SetBkMode, SetTextColor, TRANSPARENT, WHITE_BRUSH,
+    BeginPaint, CreateFontW, DT_CENTER, DT_SINGLELINE, DT_VCENTER, DeleteObject, DrawTextW,
+    EndPaint, FillRect, GetStockObject, HBRUSH, InvalidateRect, PAINTSTRUCT, SelectObject,
+    SetBkMode, SetTextColor, TRANSPARENT, WHITE_BRUSH,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DT_CENTER, DT_SINGLELINE, DT_VCENTER, DefWindowProcW, DestroyWindow,
-    DrawTextW, GetClientRect, GetSystemMetrics, HWND_TOPMOST, KillTimer, RegisterClassW,
-    SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_HIDE, SW_SHOW,
-    SWP_NOMOVE, SWP_NOSIZE, SetTimer, SetWindowPos, ShowWindow, WM_CHAR, WM_CLOSE, WM_KEYDOWN,
-    WM_LBUTTONDOWN, WM_PAINT, WM_TIMER, WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
-    WS_VISIBLE,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, GetClientRect, GetSystemMetrics, HWND_TOPMOST,
+    KillTimer, RegisterClassW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
+    SM_YVIRTUALSCREEN, SW_HIDE, SW_SHOW, SWP_NOMOVE, SWP_NOSIZE, SetTimer, SetWindowPos,
+    ShowWindow, WM_CHAR, WM_CLOSE, WM_KEYDOWN, WM_LBUTTONDOWN, WM_PAINT, WM_TIMER, WNDCLASSW,
+    WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP, WS_VISIBLE,
 };
 use windows::core::PCWSTR;
 
