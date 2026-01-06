@@ -7,7 +7,7 @@ pub mod dialogs;
 pub mod status_bar;
 
 pub use countdown::{
-    close_countdown_window, finish_countdown, show_countdown_window, update_countdown,
+    finish_countdown, show_countdown_window, update_countdown,
 };
 pub use dialogs::{open_settings_dialog, show_about_dialog};
 pub use status_bar::{

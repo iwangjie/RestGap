@@ -11,7 +11,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DT_CENTER, DT_SINGLELINE, DT_VCENTER, DefWindowProcW, DestroyWindow,
     DrawTextW, GetClientRect, GetSystemMetrics, HWND_TOPMOST, KillTimer, RegisterClassW,
     SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_HIDE, SW_SHOW,
-    SWP_NOMOVE, SWP_NOSIZE, SetTimer, SetWindowPos, ShowWindow, WM_CLOSE, WM_KEYDOWN,
+    SWP_NOMOVE, SWP_NOSIZE, SetTimer, SetWindowPos, ShowWindow, WM_CHAR, WM_CLOSE, WM_KEYDOWN,
     WM_LBUTTONDOWN, WM_PAINT, WM_TIMER, WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
     WS_VISIBLE,
 };
@@ -20,6 +20,53 @@ use windows::core::PCWSTR;
 use super::super::constants::{APP_NAME_ZH, COUNTDOWN_TIMER_ID, COUNTDOWN_WINDOW_CLASS};
 use super::super::state::with_state;
 use super::super::utils::{SoundType, format_countdown, play_sound, to_wide_string};
+
+const SKIP_PHRASE_SMART: &str = "i don’t care about my health.";
+const SKIP_PHRASE_ASCII: &str = "i don't care about my health.";
+
+fn advance_phrase_idx(idx: &mut usize, phrase: &str, ch: char) -> bool {
+    let mut buf = [0u8; 4];
+    let ch_bytes = ch.encode_utf8(&mut buf).as_bytes();
+    let phrase_bytes = phrase.as_bytes();
+
+    if *idx + ch_bytes.len() <= phrase_bytes.len()
+        && &phrase_bytes[*idx..(*idx + ch_bytes.len())] == ch_bytes
+    {
+        *idx += ch_bytes.len();
+        return *idx == phrase_bytes.len();
+    }
+
+    *idx = 0;
+    if ch_bytes.len() <= phrase_bytes.len() && &phrase_bytes[..ch_bytes.len()] == ch_bytes {
+        *idx = ch_bytes.len();
+        return *idx == phrase_bytes.len();
+    }
+    false
+}
+
+fn on_countdown_char(ch: char) -> bool {
+    let ch = if ch.is_ascii() {
+        ch.to_ascii_lowercase()
+    } else {
+        ch
+    };
+    with_state(|state| {
+        if state.countdown_hwnd.is_none() {
+            return false;
+        }
+
+        let smart_done =
+            advance_phrase_idx(&mut state.countdown_skip_smart_idx, SKIP_PHRASE_SMART, ch);
+        let ascii_done =
+            advance_phrase_idx(&mut state.countdown_skip_ascii_idx, SKIP_PHRASE_ASCII, ch);
+        if smart_done || ascii_done {
+            state.countdown_skip_smart_idx = 0;
+            state.countdown_skip_ascii_idx = 0;
+            return true;
+        }
+        false
+    })
+}
 
 fn clamp_i32(v: i32, min: i32, max: i32) -> i32 {
     if v < min {
@@ -202,6 +249,18 @@ pub unsafe extern "system" fn countdown_wndproc(
             }
             LRESULT(0)
         }
+        WM_CHAR => {
+            // 仅在休息窗口激活时处理隐藏短语；不增加非休息时开销（无全局钩子/轮询）。
+            if let Ok(code) = u32::try_from(wparam.0) {
+                if let Some(ch) = char::from_u32(code) {
+                    // 过滤控制字符（保留空格）
+                    if (ch >= ' ' && ch != '\u{7f}') && on_countdown_char(ch) {
+                        super::super::timer::skip_break();
+                    }
+                }
+            }
+            LRESULT(0)
+        }
         // 禁止跳过休息：吞掉鼠标点击 / 键盘事件
         WM_LBUTTONDOWN | WM_KEYDOWN => LRESULT(0),
         WM_CLOSE => {
@@ -283,6 +342,8 @@ pub fn show_countdown_window(seconds: u64, play_start_sound: bool) {
         state.countdown_hwnd = Some(hwnd);
         state.countdown_timer_id = Some(COUNTDOWN_TIMER_ID);
         state.countdown_end_time = Some(end_time);
+        state.countdown_skip_smart_idx = 0;
+        state.countdown_skip_ascii_idx = 0;
     });
 }
 
@@ -323,6 +384,8 @@ pub fn close_countdown_window() {
 
         state.countdown_timer_id = None;
         state.countdown_end_time = None;
+        state.countdown_skip_smart_idx = 0;
+        state.countdown_skip_ascii_idx = 0;
     });
 }
 

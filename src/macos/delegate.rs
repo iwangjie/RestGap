@@ -10,13 +10,12 @@ use objc2_app_kit::{NSApplication, NSApplicationDelegate, NSMenu, NSMenuDelegate
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSTimer};
 
 use super::state::{Phase, with_state, with_state_ref};
-use super::timer::{schedule_phase, start_break_now, transition_on_timer};
+use super::timer::{schedule_phase, skip_break as skip_break_phase, start_break_now, transition_on_timer};
 use super::ui::{
-    close_countdown_window, finish_countdown, open_settings_dialog, refresh_header_title,
-    refresh_menu_info, refresh_status_title, set_rest_now_enabled, setup_status_item,
-    show_about_dialog, update_countdown,
+    finish_countdown, open_settings_dialog, refresh_header_title, refresh_menu_info,
+    refresh_status_title, set_rest_now_enabled, setup_status_item, show_about_dialog,
+    update_countdown,
 };
-use super::utils::play_sound;
 
 define_class!(
     #[unsafe(super(NSObject))]
@@ -94,6 +93,20 @@ define_class!(
                 return;
             }
 
+            // 隐藏跳过：仅在倒计时窗口激活时处理，且不增加非休息时开销
+            let should_skip = with_state(|state| {
+                if state.countdown_skip_requested {
+                    state.countdown_skip_requested = false;
+                    true
+                } else {
+                    false
+                }
+            });
+            if should_skip {
+                skip_break_phase(self);
+                return;
+            }
+
             if !update_countdown() {
                 // 倒计时结束
                 finish_countdown();
@@ -102,9 +115,8 @@ define_class!(
 
         #[unsafe(method(skipBreak:))]
         fn skip_break(&self, _sender: Option<&AnyObject>) {
-            // 用户点击跳过休息按钮
-            close_countdown_window();
-            play_sound("Tink");
+            // 用户点击跳过休息按钮（或隐藏短语触发）
+            skip_break_phase(self);
         }
     }
 );

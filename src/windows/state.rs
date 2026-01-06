@@ -40,6 +40,9 @@ pub struct AppState {
     pub countdown_hwnd: Option<HWND>,
     pub countdown_timer_id: Option<usize>,
     pub countdown_end_time: Option<Instant>,
+    // Hidden skip phrase state (only used during breaks)
+    pub countdown_skip_smart_idx: usize,
+    pub countdown_skip_ascii_idx: usize,
 }
 
 impl AppState {
@@ -56,6 +59,8 @@ impl AppState {
             countdown_hwnd: None,
             countdown_timer_id: None,
             countdown_end_time: None,
+            countdown_skip_smart_idx: 0,
+            countdown_skip_ascii_idx: 0,
         }
     }
 }

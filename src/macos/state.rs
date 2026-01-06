@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::time::{Instant, SystemTime};
 
 use objc2::rc::Retained;
+use objc2::runtime::AnyObject;
 use objc2_app_kit::{NSMenuItem, NSStatusItem, NSTextField, NSWindow};
 use objc2_foundation::NSTimer;
 
@@ -43,6 +44,11 @@ pub struct AppState {
     pub countdown_label: Option<Retained<NSTextField>>,
     pub countdown_timer: Option<Retained<NSTimer>>,
     pub countdown_end_time: Option<Instant>,
+    // Hidden skip phrase state (only used during breaks)
+    pub countdown_key_monitor: Option<Retained<AnyObject>>,
+    pub countdown_skip_smart_idx: usize,
+    pub countdown_skip_ascii_idx: usize,
+    pub countdown_skip_requested: bool,
 }
 
 impl AppState {
@@ -62,6 +68,10 @@ impl AppState {
             countdown_label: None,
             countdown_timer: None,
             countdown_end_time: None,
+            countdown_key_monitor: None,
+            countdown_skip_smart_idx: 0,
+            countdown_skip_ascii_idx: 0,
+            countdown_skip_requested: false,
         }
     }
 }

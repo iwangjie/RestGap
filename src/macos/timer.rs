@@ -100,3 +100,15 @@ pub fn start_break_now(delegate: &RestGapDelegate) {
         schedule_phase(delegate, Phase::Breaking);
     }
 }
+
+/// 跳过当前休息（仅在 Breaking 阶段生效）
+pub fn skip_break(delegate: &RestGapDelegate) {
+    let should_skip = with_state(|state| state.phase == Phase::Breaking);
+    if !should_skip {
+        return;
+    }
+
+    // 提前结束休息：关闭倒计时窗口并回到工作阶段
+    finish_countdown();
+    schedule_phase(delegate, Phase::Working);
+}

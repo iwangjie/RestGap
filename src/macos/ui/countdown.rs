@@ -1,20 +1,110 @@
 //! 倒计时窗口模块
 
+use std::ptr;
 use std::time::{Duration, Instant};
 
-use objc2::{MainThreadOnly, sel};
+use block2::global_block;
+use objc2::{MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSBackingStoreType, NSColor, NSFont, NSScreen, NSStatusWindowLevel, NSTextField, NSWindow,
-    NSWindowCollectionBehavior, NSWindowStyleMask,
+    NSEvent, NSEventMask, NSApplication, NSBackingStoreType, NSColor, NSFont, NSScreen,
+    NSStatusWindowLevel, NSTextField, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
 };
 use objc2_core_foundation::CGFloat;
-use objc2_foundation::{NSPoint, NSRect, NSSize, NSString, NSTimer};
+use objc2_foundation::{NSPoint, NSRect, NSSize, NSString, NSTimer, NSObjectProtocol};
 
 use super::super::constants::APP_NAME_ZH;
 use super::super::delegate::RestGapDelegate;
 use super::super::state::with_state;
 use super::super::utils::{format_countdown, play_sound};
 use super::status_bar::target_anyobject;
+
+const SKIP_PHRASE_SMART: &str = "i don’t care about my health.";
+const SKIP_PHRASE_ASCII: &str = "i don't care about my health.";
+
+define_class!(
+    #[unsafe(super(NSWindow))]
+    #[thread_kind = MainThreadOnly]
+    pub struct CountdownWindow;
+
+    unsafe impl NSObjectProtocol for CountdownWindow {}
+
+    impl CountdownWindow {
+        #[unsafe(method(canBecomeKeyWindow))]
+        fn can_become_key_window(&self) -> bool {
+            true
+        }
+
+        #[unsafe(method(canBecomeMainWindow))]
+        fn can_become_main_window(&self) -> bool {
+            true
+        }
+    }
+);
+
+fn advance_phrase_idx(idx: &mut usize, phrase: &str, ch: char) -> bool {
+    let mut buf = [0u8; 4];
+    let ch_bytes = ch.encode_utf8(&mut buf).as_bytes();
+    let phrase_bytes = phrase.as_bytes();
+
+    if *idx + ch_bytes.len() <= phrase_bytes.len()
+        && &phrase_bytes[*idx..(*idx + ch_bytes.len())] == ch_bytes
+    {
+        *idx += ch_bytes.len();
+        return *idx == phrase_bytes.len();
+    }
+
+    // 朴素回退：短语以 'I' 开头且几乎不重叠，足够可靠。
+    *idx = 0;
+    if ch_bytes.len() <= phrase_bytes.len() && &phrase_bytes[..ch_bytes.len()] == ch_bytes {
+        *idx = ch_bytes.len();
+        return *idx == phrase_bytes.len();
+    }
+    false
+}
+
+fn on_countdown_keydown(event: &NSEvent) {
+    let Some(text) = event
+        .charactersIgnoringModifiers()
+        .map(|s| s.to_string())
+    else {
+        return;
+    };
+
+    with_state(|state| {
+        if state.countdown_window.is_none() {
+            return;
+        }
+        if state.countdown_skip_requested {
+            return;
+        }
+
+        for ch in text.chars() {
+            let ch = if ch.is_ascii() {
+                ch.to_ascii_lowercase()
+            } else {
+                ch
+            };
+            let smart_done =
+                advance_phrase_idx(&mut state.countdown_skip_smart_idx, SKIP_PHRASE_SMART, ch);
+            let ascii_done =
+                advance_phrase_idx(&mut state.countdown_skip_ascii_idx, SKIP_PHRASE_ASCII, ch);
+            if smart_done || ascii_done {
+                state.countdown_skip_requested = true;
+                state.countdown_skip_smart_idx = 0;
+                state.countdown_skip_ascii_idx = 0;
+                break;
+            }
+        }
+    });
+}
+
+global_block! {
+    static COUNTDOWN_KEY_MONITOR = |event: core::ptr::NonNull<NSEvent>| -> *mut NSEvent {
+        let event_ref: &NSEvent = unsafe { event.as_ref() };
+        on_countdown_keydown(event_ref);
+        ptr::null_mut()
+    };
+}
 
 /// 显示倒计时窗口
 #[allow(clippy::too_many_lines)]
@@ -42,15 +132,10 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
 
     // 创建窗口 - 使用 Borderless 样式隐藏标题栏
     let style = NSWindowStyleMask::Borderless;
-    let window = unsafe {
-        NSWindow::initWithContentRect_styleMask_backing_defer(
-            NSWindow::alloc(mtm),
-            frame,
-            style,
-            NSBackingStoreType::Buffered,
-            false,
-        )
+    let window: objc2::rc::Retained<CountdownWindow> = unsafe {
+        msg_send![CountdownWindow::alloc(mtm), initWithContentRect: frame styleMask: style backing: NSBackingStoreType::Buffered defer: false]
     };
+    let window: objc2::rc::Retained<NSWindow> = window.into_super();
 
     // 设置窗口属性
     window.setLevel(NSStatusWindowLevel); // 使用状态窗口级别，确保在最前
@@ -134,8 +219,27 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
         content_view.addSubview(&hint_label);
     }
 
+    // 让倒计时窗口能获取键盘事件（Borderless 默认不可成为 key window）
+    NSApplication::sharedApplication(mtm).activateIgnoringOtherApps(true);
+
+    // 先标记窗口存在，避免用户刚弹窗就开始输入时被忽略
+    with_state(|state| {
+        state.countdown_window = Some(window.clone());
+        state.countdown_skip_smart_idx = 0;
+        state.countdown_skip_ascii_idx = 0;
+        state.countdown_skip_requested = false;
+    });
+
     // 显示窗口
     window.makeKeyAndOrderFront(None);
+
+    // 仅在倒计时窗口存在时安装本地键盘监听器，避免非休息时任何额外开销。
+    let key_monitor = unsafe {
+        NSEvent::addLocalMonitorForEventsMatchingMask_handler(
+            NSEventMask::KeyDown,
+            &COUNTDOWN_KEY_MONITOR,
+        )
+    };
 
     // 设置结束时间
     let end_time = Instant::now() + Duration::from_secs(seconds);
@@ -154,10 +258,10 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
 
     // 保存状态
     with_state(|state| {
-        state.countdown_window = Some(window);
         state.countdown_label = Some(countdown_label);
         state.countdown_timer = Some(timer);
         state.countdown_end_time = Some(end_time);
+        state.countdown_key_monitor = key_monitor;
     });
 }
 
@@ -188,6 +292,11 @@ pub fn update_countdown() -> bool {
 /// 关闭倒计时窗口
 pub fn close_countdown_window() {
     with_state(|state| {
+        if let Some(monitor) = state.countdown_key_monitor.take() {
+            // Safety: The monitor handle is created by NSEvent::addLocalMonitor...
+            unsafe { NSEvent::removeMonitor(&monitor) };
+        }
+
         // 先使定时器无效，防止后续触发
         if let Some(timer) = state.countdown_timer.take() {
             timer.invalidate();
@@ -198,6 +307,9 @@ pub fn close_countdown_window() {
         }
         state.countdown_label = None;
         state.countdown_end_time = None;
+        state.countdown_skip_smart_idx = 0;
+        state.countdown_skip_ascii_idx = 0;
+        state.countdown_skip_requested = false;
     });
 }
 
