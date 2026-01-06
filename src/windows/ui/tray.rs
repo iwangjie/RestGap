@@ -8,7 +8,7 @@ use windows::Win32::UI::Shell::{
     Shell_NotifyIconW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, IMAGE_ICON, LR_SHARED, LoadImageW,
+    AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, IDI_APPLICATION, LoadIconW,
     MF_DISABLED, MF_GRAYED, MF_SEPARATOR, MF_STRING, SetForegroundWindow, TPM_BOTTOMALIGN,
     TPM_LEFTALIGN, TrackPopupMenu,
 };
@@ -139,20 +139,12 @@ pub fn setup_tray_icon(hwnd: HWND) {
 
 /// 加载托盘图标
 fn load_tray_icon() -> windows::Win32::UI::WindowsAndMessaging::HICON {
-    // 尝试加载自定义图标，失败则使用系统默认图标
-    // 这里使用系统默认图标作为后备
+    // 使用稳定的系统默认图标，避免因资源加载失败导致托盘图标缺失。
+    // 需要更换为应用图标时，建议通过资源文件（.rc）或在安装包中提供 .ico。
     unsafe {
-        let icon = LoadImageW(
-            None,
-            windows::core::w!("shell32.dll,13"), // 使用系统图标
-            IMAGE_ICON,
-            16,
-            16,
-            LR_SHARED,
-        );
-        icon.map_or_else(
+        LoadIconW(None, IDI_APPLICATION).map_or_else(
             |_| windows::Win32::UI::WindowsAndMessaging::HICON::default(),
-            |h| windows::Win32::UI::WindowsAndMessaging::HICON(h.0),
+            |h| h,
         )
     }
 }
