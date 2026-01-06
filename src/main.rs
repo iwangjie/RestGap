@@ -3,6 +3,9 @@
 //! 支持 macOS、Windows 和 Linux 的休息提醒应用，使用事件驱动架构而非轮询，
 //! 追求极低的 CPU 和内存占用。
 
+// Windows: 隐藏控制台窗口，使用纯 GUI 模式
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
+
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 mod common;
 

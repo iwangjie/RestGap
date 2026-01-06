@@ -75,4 +75,14 @@ impl Config {
             .clamp(Self::MIN_BREAK_SECONDS, Self::MAX_BREAK_SECONDS);
         config
     }
+
+    /// Get work interval as Duration
+    pub fn work_interval(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(self.interval_minutes * 60)
+    }
+
+    /// Get break duration as Duration
+    pub fn break_duration(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(self.break_seconds)
+    }
 }
