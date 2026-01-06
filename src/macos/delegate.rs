@@ -10,7 +10,9 @@ use objc2_app_kit::{NSApplication, NSApplicationDelegate, NSMenu, NSMenuDelegate
 use objc2_foundation::{NSNotification, NSObjectProtocol, NSTimer};
 
 use super::state::{Phase, with_state, with_state_ref};
-use super::timer::{schedule_phase, skip_break as skip_break_phase, start_break_now, transition_on_timer};
+use super::timer::{
+    schedule_phase, skip_break as skip_break_phase, start_break_now, transition_on_timer,
+};
 use super::ui::{
     finish_countdown, open_settings_dialog, refresh_header_title, refresh_menu_info,
     refresh_status_title, set_rest_now_enabled, setup_status_item, show_about_dialog,

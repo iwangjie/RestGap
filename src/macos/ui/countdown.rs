@@ -6,11 +6,11 @@ use std::time::{Duration, Instant};
 use block2::global_block;
 use objc2::{MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSEvent, NSEventMask, NSApplication, NSBackingStoreType, NSColor, NSFont, NSScreen,
+    NSApplication, NSBackingStoreType, NSColor, NSEvent, NSEventMask, NSFont, NSScreen,
     NSStatusWindowLevel, NSTextField, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
 };
 use objc2_core_foundation::CGFloat;
-use objc2_foundation::{NSPoint, NSRect, NSSize, NSString, NSTimer, NSObjectProtocol};
+use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSTimer};
 
 use super::super::constants::APP_NAME_ZH;
 use super::super::delegate::RestGapDelegate;
@@ -63,10 +63,7 @@ fn advance_phrase_idx(idx: &mut usize, phrase: &str, ch: char) -> bool {
 }
 
 fn on_countdown_keydown(event: &NSEvent) {
-    let Some(text) = event
-        .charactersIgnoringModifiers()
-        .map(|s| s.to_string())
-    else {
+    let Some(text) = event.charactersIgnoringModifiers().map(|s| s.to_string()) else {
         return;
     };
 

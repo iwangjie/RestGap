@@ -8,21 +8,11 @@ newline_style = "Unix"
 use_small_heuristics = "Default"
 
 # 导入分组
-imports_granularity = "Module"
-group_imports = "StdExternalCrate"
 reorder_imports = true
 reorder_modules = true
 
-# 格式化选项
-format_code_in_doc_comments = true
-format_macro_matchers = true
-format_strings = false
-wrap_comments = true
-comment_width = 80
-
 # 函数签名
 fn_params_layout = "Tall"
-fn_single_line = false
 
 # 其他
 use_field_init_shorthand = true
