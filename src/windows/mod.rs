@@ -71,7 +71,7 @@ pub fn run() {
             0,
             None,
             None,
-            Some(hinstance),
+            hinstance,
             None,
         )
     };
