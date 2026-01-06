@@ -52,7 +52,10 @@ pub fn run() {
     assert!(atom != 0, "Failed to register main window class");
 
     // 注册倒计时窗口类
-    assert!(register_countdown_class(), "Failed to register countdown window class");
+    assert!(
+        register_countdown_class(),
+        "Failed to register countdown window class"
+    );
 
     // 创建隐藏的主窗口（用于接收消息）
     let hwnd = unsafe {
