@@ -113,7 +113,7 @@ pub fn run() {
                 match lang {
                     Language::Zh => println!("\n休息时间！请休息 {break_secs} 秒\n"),
                     Language::En => {
-                        println!("\nBreak time! Please rest for {break_secs} seconds\n")
+                        println!("\nBreak time! Please rest for {break_secs} seconds\n");
                     }
                 }
 
