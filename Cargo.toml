@@ -1,6 +1,6 @@
 [package]
 name = "restgap"
-version = "0.8.0"
+version = "1.0.0"
 edition = "2024"
 authors = ["iwangjie <345127857@qq.com>"]
 description = "息间（RestGap）— 跨平台休息提醒应用（macOS/Windows/Linux）"
