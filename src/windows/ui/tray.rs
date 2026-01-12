@@ -478,9 +478,9 @@ pub fn refresh_static_menu_titles() {
                 MF_BYCOMMAND | MF_UNCHECKED
             };
 
-            let _ = CheckMenuItem(menu, u32::from(ID_MENU_LANGUAGE_AUTO), auto_flag);
-            let _ = CheckMenuItem(menu, u32::from(ID_MENU_LANGUAGE_EN), en_flag);
-            let _ = CheckMenuItem(menu, u32::from(ID_MENU_LANGUAGE_ZH), zh_flag);
+            let _ = CheckMenuItem(menu, u32::from(ID_MENU_LANGUAGE_AUTO), auto_flag.0);
+            let _ = CheckMenuItem(menu, u32::from(ID_MENU_LANGUAGE_EN), en_flag.0);
+            let _ = CheckMenuItem(menu, u32::from(ID_MENU_LANGUAGE_ZH), zh_flag.0);
         }
     });
 }
