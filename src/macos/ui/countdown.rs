@@ -12,11 +12,11 @@ use objc2_app_kit::{
 use objc2_core_foundation::CGFloat;
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSTimer};
 
-use super::super::constants::APP_NAME_ZH;
 use super::super::delegate::RestGapDelegate;
 use super::super::state::with_state;
 use super::super::utils::{format_countdown, play_sound};
 use super::status_bar::target_anyobject;
+use crate::i18n::Texts;
 
 const SKIP_PHRASE_SMART: &str = "i don’t care about my health.";
 const SKIP_PHRASE_ASCII: &str = "i don't care about my health.";
@@ -107,6 +107,7 @@ global_block! {
 #[allow(clippy::too_many_lines)]
 pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_start_sound: bool) {
     let mtm = delegate.mtm();
+    let texts = Texts::new(with_state(|state| state.config.effective_language()));
 
     // 关闭已存在的倒计时窗口
     close_countdown_window();
@@ -160,7 +161,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     );
     let title_label = {
         let label = NSTextField::initWithFrame(NSTextField::alloc(mtm), title_frame);
-        label.setStringValue(&NSString::from_str(&format!("{APP_NAME_ZH} · 休息倒计时")));
+        label.setStringValue(&NSString::from_str(&texts.countdown_title()));
         label.setBezeled(false);
         label.setDrawsBackground(false);
         label.setEditable(false);
@@ -197,7 +198,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     );
     let hint_label = {
         let label = NSTextField::initWithFrame(NSTextField::alloc(mtm), hint_frame);
-        label.setStringValue(&NSString::from_str("放松眼睛，伸展身体"));
+        label.setStringValue(&NSString::from_str(texts.countdown_hint()));
         label.setBezeled(false);
         label.setDrawsBackground(false);
         label.setEditable(false);

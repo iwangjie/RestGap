@@ -6,11 +6,15 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
+use crate::i18n::{Language, LanguagePreference};
+
 /// Application configuration
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub interval_minutes: u64,
     pub break_seconds: u64,
+    #[serde(default)]
+    pub language: LanguagePreference,
 }
 
 impl Config {
@@ -28,6 +32,7 @@ impl Config {
         Self {
             interval_minutes: Self::DEFAULT_INTERVAL_MINUTES,
             break_seconds: Self::DEFAULT_BREAK_SECONDS,
+            language: LanguagePreference::Auto,
         }
     }
 
@@ -74,6 +79,10 @@ impl Config {
             .break_seconds
             .clamp(Self::MIN_BREAK_SECONDS, Self::MAX_BREAK_SECONDS);
         config
+    }
+
+    pub fn effective_language(&self) -> Language {
+        self.language.resolve()
     }
 
     /// Get work interval as Duration

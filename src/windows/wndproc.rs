@@ -6,13 +6,18 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::constants::{
-    ID_MENU_ABOUT, ID_MENU_QUIT, ID_MENU_REST_NOW, ID_MENU_SETTINGS, PHASE_TIMER_ID,
-    WM_TRAY_CALLBACK,
+    ID_MENU_ABOUT, ID_MENU_LANGUAGE_AUTO, ID_MENU_LANGUAGE_EN, ID_MENU_LANGUAGE_ZH, ID_MENU_QUIT,
+    ID_MENU_REST_NOW, ID_MENU_SETTINGS, PHASE_TIMER_ID, WM_TRAY_CALLBACK,
 };
 use super::state::Phase;
+use super::state::with_state;
 use super::timer::{schedule_phase, start_break_now, transition_on_timer};
 use super::ui::dialogs::{open_settings_dialog, show_about_dialog};
 use super::ui::tray::{remove_tray_icon, setup_tray_icon, show_tray_menu};
+use super::ui::{
+    refresh_header_title, refresh_menu_info, refresh_static_menu_titles, refresh_status_title,
+};
+use crate::i18n::LanguagePreference;
 
 /// 主窗口过程
 #[allow(unsafe_op_in_unsafe_fn)]
@@ -72,6 +77,15 @@ pub unsafe extern "system" fn main_wndproc(
                     remove_tray_icon();
                     PostQuitMessage(0);
                 }
+                ID_MENU_LANGUAGE_AUTO => {
+                    set_language_preference(LanguagePreference::Auto);
+                }
+                ID_MENU_LANGUAGE_EN => {
+                    set_language_preference(LanguagePreference::En);
+                }
+                ID_MENU_LANGUAGE_ZH => {
+                    set_language_preference(LanguagePreference::Zh);
+                }
                 _ => {}
             }
             LRESULT(0)
@@ -83,4 +97,16 @@ pub unsafe extern "system" fn main_wndproc(
         }
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),
     }
+}
+
+fn set_language_preference(pref: LanguagePreference) {
+    with_state(|state| {
+        state.config.language = pref;
+        let _ = state.config.save();
+    });
+
+    refresh_header_title();
+    refresh_static_menu_titles();
+    refresh_menu_info();
+    refresh_status_title();
 }

@@ -9,30 +9,30 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, IDI_APPLICATION, LoadIconW,
-    MF_DISABLED, MF_GRAYED, MF_SEPARATOR, MF_STRING, SetForegroundWindow, TPM_BOTTOMALIGN,
-    TPM_LEFTALIGN, TrackPopupMenu,
+    MF_CHECKED, MF_DISABLED, MF_GRAYED, MF_SEPARATOR, MF_STRING, SetForegroundWindow,
+    TPM_BOTTOMALIGN, TPM_LEFTALIGN, TrackPopupMenu,
 };
 use windows::core::PCWSTR;
 
 use super::super::constants::{
-    APP_NAME_ZH, ID_MENU_ABOUT, ID_MENU_HEADER, ID_MENU_NEXT_BREAK, ID_MENU_QUIT,
+    ID_MENU_ABOUT, ID_MENU_HEADER, ID_MENU_LANGUAGE_AUTO, ID_MENU_LANGUAGE_EN,
+    ID_MENU_LANGUAGE_HEADER, ID_MENU_LANGUAGE_ZH, ID_MENU_NEXT_BREAK, ID_MENU_QUIT,
     ID_MENU_REMAINING, ID_MENU_REST_NOW, ID_MENU_SETTINGS, TRAY_ICON_ID, WM_TRAY_CALLBACK,
 };
 use super::super::state::{Phase, with_state, with_state_ref};
 use super::super::utils::{approx_duration, format_hhmm, to_wide_array, to_wide_string};
+use crate::i18n::{LanguagePreference, Texts};
 
 /// 设置系统托盘图标
 pub fn setup_tray_icon(hwnd: HWND) {
     let config = with_state_ref(|s| s.config.clone());
+    let texts = Texts::new(config.effective_language());
 
     // 创建托盘菜单
     let menu = unsafe { CreatePopupMenu() }.expect("Failed to create popup menu");
 
     // 添加菜单项
-    let header = format!(
-        "{APP_NAME_ZH} · 每 {} 分钟休息 {} 秒",
-        config.interval_minutes, config.break_seconds
-    );
+    let header = texts.header_title(config.interval_minutes, config.break_seconds);
     let header_wide = to_wide_string(&header);
     unsafe {
         let _ = AppendMenuW(
@@ -43,7 +43,7 @@ pub fn setup_tray_icon(hwnd: HWND) {
         );
     }
 
-    let next_break_wide = to_wide_string("下次休息：--:--");
+    let next_break_wide = to_wide_string(texts.menu_next_break_placeholder());
     unsafe {
         let _ = AppendMenuW(
             menu,
@@ -53,7 +53,7 @@ pub fn setup_tray_icon(hwnd: HWND) {
         );
     }
 
-    let remaining_wide = to_wide_string("休息剩余：—");
+    let remaining_wide = to_wide_string(texts.menu_remaining_placeholder());
     unsafe {
         let _ = AppendMenuW(
             menu,
@@ -67,7 +67,7 @@ pub fn setup_tray_icon(hwnd: HWND) {
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
     }
 
-    let rest_now_wide = to_wide_string("现在休息");
+    let rest_now_wide = to_wide_string(texts.menu_rest_now());
     unsafe {
         let _ = AppendMenuW(
             menu,
@@ -77,7 +77,7 @@ pub fn setup_tray_icon(hwnd: HWND) {
         );
     }
 
-    let settings_wide = to_wide_string("配置");
+    let settings_wide = to_wide_string(texts.menu_settings());
     unsafe {
         let _ = AppendMenuW(
             menu,
@@ -87,7 +87,7 @@ pub fn setup_tray_icon(hwnd: HWND) {
         );
     }
 
-    let about_wide = to_wide_string(&format!("关于 {APP_NAME_ZH}"));
+    let about_wide = to_wide_string(&texts.menu_about());
     unsafe {
         let _ = AppendMenuW(
             menu,
@@ -101,7 +101,68 @@ pub fn setup_tray_icon(hwnd: HWND) {
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
     }
 
-    let quit_wide = to_wide_string("退出");
+    // Language options (stored in config; Auto follows OS language)
+    let language_header_wide = to_wide_string(texts.menu_language_header());
+    unsafe {
+        let _ = AppendMenuW(
+            menu,
+            MF_STRING | MF_DISABLED | MF_GRAYED,
+            ID_MENU_LANGUAGE_HEADER as usize,
+            PCWSTR(language_header_wide.as_ptr()),
+        );
+    }
+
+    let auto_flags = if config.language == LanguagePreference::Auto {
+        MF_STRING | MF_CHECKED
+    } else {
+        MF_STRING
+    };
+    let en_flags = if config.language == LanguagePreference::En {
+        MF_STRING | MF_CHECKED
+    } else {
+        MF_STRING
+    };
+    let zh_flags = if config.language == LanguagePreference::Zh {
+        MF_STRING | MF_CHECKED
+    } else {
+        MF_STRING
+    };
+
+    let language_auto_wide = to_wide_string(texts.language_auto());
+    unsafe {
+        let _ = AppendMenuW(
+            menu,
+            auto_flags,
+            ID_MENU_LANGUAGE_AUTO as usize,
+            PCWSTR(language_auto_wide.as_ptr()),
+        );
+    }
+
+    let language_en_wide = to_wide_string(texts.language_en());
+    unsafe {
+        let _ = AppendMenuW(
+            menu,
+            en_flags,
+            ID_MENU_LANGUAGE_EN as usize,
+            PCWSTR(language_en_wide.as_ptr()),
+        );
+    }
+
+    let language_zh_wide = to_wide_string(texts.language_zh());
+    unsafe {
+        let _ = AppendMenuW(
+            menu,
+            zh_flags,
+            ID_MENU_LANGUAGE_ZH as usize,
+            PCWSTR(language_zh_wide.as_ptr()),
+        );
+    }
+
+    unsafe {
+        let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
+    }
+
+    let quit_wide = to_wide_string(texts.menu_quit());
     unsafe {
         let _ = AppendMenuW(
             menu,
@@ -120,7 +181,7 @@ pub fn setup_tray_icon(hwnd: HWND) {
         uFlags: NIF_ICON | NIF_MESSAGE | NIF_TIP,
         uCallbackMessage: WM_TRAY_CALLBACK,
         hIcon: load_tray_icon(),
-        szTip: to_wide_array::<128>(&format!("{APP_NAME_ZH} - 休息提醒")),
+        szTip: to_wide_array::<128>(&texts.tray_tip_app()),
         ..Default::default()
     };
 
@@ -175,6 +236,7 @@ pub fn show_tray_menu(hwnd: HWND) {
 /// 刷新状态栏标题（托盘图标提示）
 pub fn refresh_status_title() {
     with_state(|state| {
+        let texts = Texts::new(state.config.effective_language());
         let Some(ref mut nid) = state.tray_icon_data else {
             return;
         };
@@ -184,14 +246,14 @@ pub fn refresh_status_title() {
                 let hm = state
                     .phase_deadline_wall
                     .map_or_else(|| "--:--".to_string(), format_hhmm);
-                format!("⏰ 下次休息：{hm}")
+                texts.status_tip_working(&hm)
             }
             Phase::Breaking => {
                 let remaining = state
                     .phase_deadline_mono
                     .and_then(|t| t.checked_duration_since(Instant::now()))
                     .unwrap_or(Duration::from_secs(0));
-                format!("☕ 休息中：{}", approx_duration(remaining))
+                texts.status_tip_breaking(&approx_duration(remaining))
             }
         };
 
@@ -227,6 +289,7 @@ pub fn set_rest_now_enabled(enabled: bool) {
 pub fn refresh_menu_info() {
     let now = Instant::now();
     with_state(|state| {
+        let texts = Texts::new(state.config.effective_language());
         let Some(menu) = state.tray_menu else { return };
 
         let phase_deadline_mono = state.phase_deadline_mono;
@@ -252,20 +315,16 @@ pub fn refresh_menu_info() {
         };
 
         let next_hm = next_break_wall.map_or_else(|| "--:--".to_string(), format_hhmm);
-        let next_title = format!(
-            "下次休息：{}（{}）",
-            next_hm,
-            approx_duration(next_break_in)
-        );
+        let next_title = texts.next_break_title(&next_hm, &approx_duration(next_break_in));
 
         let remaining_title = match state.phase {
-            Phase::Working => "休息剩余：—".to_string(),
+            Phase::Working => texts.remaining_title_working().to_string(),
             Phase::Breaking => {
                 let remaining = phase_deadline_mono
                     .and_then(|t| t.checked_duration_since(now))
                     .unwrap_or(Duration::from_secs(0));
                 let end_hm = phase_deadline_wall.map_or_else(|| "--:--".to_string(), format_hhmm);
-                format!("休息剩余：{}（至 {}）", approx_duration(remaining), end_hm)
+                texts.remaining_title_breaking(&approx_duration(remaining), &end_hm)
             }
         };
 
@@ -299,10 +358,8 @@ pub fn refresh_header_title() {
     with_state(|state| {
         let Some(menu) = state.tray_menu else { return };
 
-        let title = format!(
-            "{APP_NAME_ZH} · 每 {} 分钟休息 {} 秒",
-            state.config.interval_minutes, state.config.break_seconds
-        );
+        let texts = Texts::new(state.config.effective_language());
+        let title = texts.header_title(state.config.interval_minutes, state.config.break_seconds);
 
         unsafe {
             use windows::Win32::UI::WindowsAndMessaging::{MF_BYCOMMAND, ModifyMenuW};
@@ -315,6 +372,115 @@ pub fn refresh_header_title() {
                 ID_MENU_HEADER as usize,
                 PCWSTR(title_wide.as_ptr()),
             );
+        }
+    });
+}
+
+pub fn refresh_static_menu_titles() {
+    with_state(|state| {
+        let texts = Texts::new(state.config.effective_language());
+        let Some(menu) = state.tray_menu else { return };
+
+        unsafe {
+            use windows::Win32::UI::WindowsAndMessaging::{MF_BYCOMMAND, ModifyMenuW};
+
+            let rest_now_wide = to_wide_string(texts.menu_rest_now());
+            let _ = ModifyMenuW(
+                menu,
+                u32::from(ID_MENU_REST_NOW),
+                MF_BYCOMMAND | MF_STRING,
+                ID_MENU_REST_NOW as usize,
+                PCWSTR(rest_now_wide.as_ptr()),
+            );
+
+            let settings_wide = to_wide_string(texts.menu_settings());
+            let _ = ModifyMenuW(
+                menu,
+                u32::from(ID_MENU_SETTINGS),
+                MF_BYCOMMAND | MF_STRING,
+                ID_MENU_SETTINGS as usize,
+                PCWSTR(settings_wide.as_ptr()),
+            );
+
+            let about_wide = to_wide_string(&texts.menu_about());
+            let _ = ModifyMenuW(
+                menu,
+                u32::from(ID_MENU_ABOUT),
+                MF_BYCOMMAND | MF_STRING,
+                ID_MENU_ABOUT as usize,
+                PCWSTR(about_wide.as_ptr()),
+            );
+
+            let quit_wide = to_wide_string(texts.menu_quit());
+            let _ = ModifyMenuW(
+                menu,
+                u32::from(ID_MENU_QUIT),
+                MF_BYCOMMAND | MF_STRING,
+                ID_MENU_QUIT as usize,
+                PCWSTR(quit_wide.as_ptr()),
+            );
+
+            let language_header_wide = to_wide_string(texts.menu_language_header());
+            let _ = ModifyMenuW(
+                menu,
+                u32::from(ID_MENU_LANGUAGE_HEADER),
+                MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED,
+                ID_MENU_LANGUAGE_HEADER as usize,
+                PCWSTR(language_header_wide.as_ptr()),
+            );
+
+            let language_auto_wide = to_wide_string(texts.language_auto());
+            let _ = ModifyMenuW(
+                menu,
+                u32::from(ID_MENU_LANGUAGE_AUTO),
+                MF_BYCOMMAND | MF_STRING,
+                ID_MENU_LANGUAGE_AUTO as usize,
+                PCWSTR(language_auto_wide.as_ptr()),
+            );
+
+            let language_en_wide = to_wide_string(texts.language_en());
+            let _ = ModifyMenuW(
+                menu,
+                u32::from(ID_MENU_LANGUAGE_EN),
+                MF_BYCOMMAND | MF_STRING,
+                ID_MENU_LANGUAGE_EN as usize,
+                PCWSTR(language_en_wide.as_ptr()),
+            );
+
+            let language_zh_wide = to_wide_string(texts.language_zh());
+            let _ = ModifyMenuW(
+                menu,
+                u32::from(ID_MENU_LANGUAGE_ZH),
+                MF_BYCOMMAND | MF_STRING,
+                ID_MENU_LANGUAGE_ZH as usize,
+                PCWSTR(language_zh_wide.as_ptr()),
+            );
+        }
+
+        // Update checked state (best-effort; menu must exist).
+        unsafe {
+            use windows::Win32::UI::WindowsAndMessaging::{
+                CheckMenuItem, MF_BYCOMMAND, MF_CHECKED, MF_UNCHECKED,
+            };
+            let auto_flag = if state.config.language == LanguagePreference::Auto {
+                MF_BYCOMMAND | MF_CHECKED
+            } else {
+                MF_BYCOMMAND | MF_UNCHECKED
+            };
+            let en_flag = if state.config.language == LanguagePreference::En {
+                MF_BYCOMMAND | MF_CHECKED
+            } else {
+                MF_BYCOMMAND | MF_UNCHECKED
+            };
+            let zh_flag = if state.config.language == LanguagePreference::Zh {
+                MF_BYCOMMAND | MF_CHECKED
+            } else {
+                MF_BYCOMMAND | MF_UNCHECKED
+            };
+
+            let _ = CheckMenuItem(menu, u32::from(ID_MENU_LANGUAGE_AUTO), auto_flag);
+            let _ = CheckMenuItem(menu, u32::from(ID_MENU_LANGUAGE_EN), en_flag);
+            let _ = CheckMenuItem(menu, u32::from(ID_MENU_LANGUAGE_ZH), zh_flag);
         }
     });
 }

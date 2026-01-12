@@ -1,6 +1,5 @@
 //! 应用常量定义
 
-pub const APP_NAME_ZH: &str = "息间";
 pub const APP_NAME_DISPLAY: &str = "息间（RestGap）";
 
 // 窗口类名
@@ -25,3 +24,7 @@ pub const ID_MENU_REST_NOW: u16 = 103;
 pub const ID_MENU_SETTINGS: u16 = 104;
 pub const ID_MENU_ABOUT: u16 = 105;
 pub const ID_MENU_QUIT: u16 = 106;
+pub const ID_MENU_LANGUAGE_HEADER: u16 = 107;
+pub const ID_MENU_LANGUAGE_AUTO: u16 = 108;
+pub const ID_MENU_LANGUAGE_EN: u16 = 109;
+pub const ID_MENU_LANGUAGE_ZH: u16 = 110;

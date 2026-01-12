@@ -9,6 +9,6 @@ pub mod status_bar;
 pub use countdown::{finish_countdown, show_countdown_window, update_countdown};
 pub use dialogs::{open_settings_dialog, show_about_dialog};
 pub use status_bar::{
-    refresh_header_title, refresh_menu_info, refresh_status_title, set_rest_now_enabled,
-    setup_status_item, target_anyobject,
+    refresh_header_title, refresh_menu_info, refresh_static_menu_titles, refresh_status_title,
+    set_rest_now_enabled, setup_status_item, target_anyobject,
 };

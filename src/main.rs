@@ -9,6 +9,8 @@
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 mod common;
 
+pub(crate) mod i18n;
+
 #[cfg(target_os = "macos")]
 mod macos;
 

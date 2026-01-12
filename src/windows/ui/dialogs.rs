@@ -14,12 +14,14 @@ use super::super::timer::schedule_phase;
 use super::super::utils::to_wide_string;
 use super::countdown::show_countdown_window;
 use crate::common::Config;
+use crate::i18n::Texts;
 
 /// 显示无效配置警告
 #[allow(dead_code)]
 pub fn show_invalid_settings_alert(hwnd: Option<HWND>) {
-    let title = to_wide_string("配置无效");
-    let message = to_wide_string("请输入有效的数字：每 N 分钟休息 N 秒。");
+    let texts = Texts::new(with_state_ref(|s| s.config.effective_language()));
+    let title = to_wide_string(texts.invalid_settings_title());
+    let message = to_wide_string(texts.invalid_settings_message());
 
     unsafe {
         let _ = MessageBoxW(
@@ -37,15 +39,15 @@ pub fn show_invalid_settings_alert(hwnd: Option<HWND>) {
 /// 通过两次 `MessageBox` 输入来获取配置
 pub fn open_settings_dialog(hwnd: Option<HWND>) {
     let current = with_state_ref(|s| s.config.clone());
+    let texts = Texts::new(current.effective_language());
 
     // 使用简单的方式：显示当前配置，让用户确认是否修改
     // 实际生产环境中应该使用 DialogBoxIndirectParam 创建自定义对话框
 
-    let title = to_wide_string("配置");
-    let message = to_wide_string(&format!(
-        "当前配置：\n\n每 {} 分钟休息 {} 秒\n\n保存后将从现在开始重新计时。\n\n是否使用默认配置（30分钟/120秒）？",
-        current.interval_minutes, current.break_seconds
-    ));
+    let title = to_wide_string(texts.settings_title());
+    let message = to_wide_string(
+        &texts.settings_current_windows(current.interval_minutes, current.break_seconds),
+    );
 
     let result = unsafe {
         MessageBoxW(
@@ -61,6 +63,7 @@ pub fn open_settings_dialog(hwnd: Option<HWND>) {
         let new_config = Config {
             interval_minutes: 30,
             break_seconds: 120,
+            language: current.language,
         };
         let _ = new_config.save();
 
@@ -82,11 +85,9 @@ pub fn open_settings_dialog(hwnd: Option<HWND>) {
 
 /// 显示关于对话框
 pub fn show_about_dialog(hwnd: Option<HWND>) {
+    let texts = Texts::new(with_state_ref(|s| s.config.effective_language()));
     let title = to_wide_string(APP_NAME_DISPLAY);
-    let message = to_wide_string(&format!(
-        "版本：{}\n\nWindows 系统托盘休息提醒（事件驱动 / 非轮询）。\n\n是否访问主页？",
-        env!("CARGO_PKG_VERSION")
-    ));
+    let message = to_wide_string(&texts.about_message_windows());
 
     let result = unsafe {
         MessageBoxW(

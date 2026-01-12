@@ -9,6 +9,7 @@ pub mod config;
 pub mod constants;
 pub mod delegate;
 pub mod error;
+pub mod locale;
 pub mod log;
 pub mod state;
 pub mod timer;

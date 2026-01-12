@@ -6,6 +6,7 @@
 #![allow(unsafe_code)] // Windows API 调用需要 unsafe
 
 pub mod constants;
+pub mod locale;
 pub mod state;
 pub mod timer;
 pub mod ui;

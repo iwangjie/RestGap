@@ -6,5 +6,6 @@ pub mod tray;
 
 pub use countdown::{finish_countdown, show_countdown_window};
 pub use tray::{
-    refresh_header_title, refresh_menu_info, refresh_status_title, set_rest_now_enabled,
+    refresh_header_title, refresh_menu_info, refresh_static_menu_titles, refresh_status_title,
+    set_rest_now_enabled,
 };

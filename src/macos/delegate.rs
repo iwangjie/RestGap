@@ -15,9 +15,10 @@ use super::timer::{
 };
 use super::ui::{
     finish_countdown, open_settings_dialog, refresh_header_title, refresh_menu_info,
-    refresh_status_title, set_rest_now_enabled, setup_status_item, show_about_dialog,
-    update_countdown,
+    refresh_static_menu_titles, refresh_status_title, set_rest_now_enabled, setup_status_item,
+    show_about_dialog, update_countdown,
 };
+use crate::i18n::LanguagePreference;
 
 define_class!(
     #[unsafe(super(NSObject))]
@@ -54,6 +55,7 @@ define_class!(
             // 无轮询：仅在用户打开菜单时刷新显示。
             refresh_status_title();
             refresh_header_title();
+            refresh_static_menu_titles();
             set_rest_now_enabled(with_state_ref(|s| s.phase == Phase::Working));
             refresh_menu_info();
         }
@@ -120,8 +122,36 @@ define_class!(
             // 用户点击跳过休息按钮（或隐藏短语触发）
             skip_break_phase(self);
         }
+
+        #[unsafe(method(languageAuto:))]
+        fn language_auto(&self, _sender: Option<&AnyObject>) {
+            set_language_preference(LanguagePreference::Auto);
+        }
+
+        #[unsafe(method(languageEnglish:))]
+        fn language_english(&self, _sender: Option<&AnyObject>) {
+            set_language_preference(LanguagePreference::En);
+        }
+
+        #[unsafe(method(languageChinese:))]
+        fn language_chinese(&self, _sender: Option<&AnyObject>) {
+            set_language_preference(LanguagePreference::Zh);
+        }
     }
 );
+
+fn set_language_preference(pref: LanguagePreference) {
+    with_state(|state| {
+        state.config.language = pref;
+        state.config.save();
+    });
+
+    // Best-effort immediate UI refresh (no polling).
+    refresh_status_title();
+    refresh_header_title();
+    refresh_static_menu_titles();
+    refresh_menu_info();
+}
 
 /// 创建并返回 delegate 实例
 pub fn create_delegate(mtm: MainThreadMarker) -> Retained<RestGapDelegate> {

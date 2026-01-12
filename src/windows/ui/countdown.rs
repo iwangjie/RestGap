@@ -17,9 +17,10 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::PCWSTR;
 
-use super::super::constants::{APP_NAME_ZH, COUNTDOWN_TIMER_ID, COUNTDOWN_WINDOW_CLASS};
-use super::super::state::with_state;
+use super::super::constants::{COUNTDOWN_TIMER_ID, COUNTDOWN_WINDOW_CLASS};
+use super::super::state::{with_state, with_state_ref};
 use super::super::utils::{SoundType, format_countdown, play_sound, to_wide_string};
+use crate::i18n::Texts;
 
 const SKIP_PHRASE_SMART: &str = "i don’t care about my health.";
 const SKIP_PHRASE_ASCII: &str = "i don't care about my health.";
@@ -142,7 +143,8 @@ pub unsafe extern "system" fn countdown_wndproc(
             let hint_center_y = rect.top + height * 68 / 100;
 
             // 绘制标题（自动居中，避免 DPI/字体导致的错位）
-            let title = format!("{APP_NAME_ZH} · 休息倒计时");
+            let title =
+                Texts::new(with_state_ref(|s| s.config.effective_language())).countdown_title();
             let mut title_wide: Vec<u16> = title.encode_utf16().collect();
             let title_font = CreateFontW(
                 -title_px,
@@ -197,7 +199,8 @@ pub unsafe extern "system" fn countdown_wndproc(
             );
 
             // 绘制提示文本
-            let hint = "放松眼睛，伸展身体";
+            let hint =
+                Texts::new(with_state_ref(|s| s.config.effective_language())).countdown_hint();
             let mut hint_wide: Vec<u16> = hint.encode_utf16().collect();
             let hint_font = CreateFontW(
                 -hint_px,
