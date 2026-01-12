@@ -285,7 +285,24 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          # rustup is preinstalled on GitHub-hosted runners, but toolchain install can be flaky on Windows.
+          for ($i = 1; $i -le 5; $i++) {
+            try {
+              rustup toolchain install stable --profile minimal --no-self-update
+              rustup default stable
+              rustc -V
+              cargo -V
+              break
+            } catch {
+              if ($i -eq 5) { throw }
+              Write-Host "Rust toolchain install failed (attempt $i/5). Retrying in 10 seconds..."
+              Start-Sleep -Seconds 10
+            }
+          }
 
       - name: Cache cargo registry
         uses: actions/cache@v4
