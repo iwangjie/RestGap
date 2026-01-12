@@ -205,6 +205,7 @@ impl Texts {
         }
     }
 
+    #[cfg(target_os = "macos")]
     pub const fn settings_informative_text(&self) -> &'static str {
         match self.lang {
             Language::En => "After saving, the timer will restart from now.",
@@ -212,6 +213,7 @@ impl Texts {
         }
     }
 
+    #[cfg(target_os = "macos")]
     pub const fn settings_save_button(&self) -> &'static str {
         match self.lang {
             Language::En => "Save",
@@ -219,6 +221,7 @@ impl Texts {
         }
     }
 
+    #[cfg(target_os = "macos")]
     pub const fn settings_cancel_button(&self) -> &'static str {
         match self.lang {
             Language::En => "Cancel",
@@ -226,6 +229,7 @@ impl Texts {
         }
     }
 
+    #[cfg(target_os = "macos")]
     pub const fn settings_language_button(&self) -> &'static str {
         match self.lang {
             Language::En => "Language…",
@@ -233,6 +237,7 @@ impl Texts {
         }
     }
 
+    #[cfg(target_os = "macos")]
     pub const fn settings_interval_label(&self) -> &'static str {
         match self.lang {
             Language::En => "Break every N minutes:",
@@ -240,6 +245,7 @@ impl Texts {
         }
     }
 
+    #[cfg(target_os = "macos")]
     pub const fn settings_break_label(&self) -> &'static str {
         match self.lang {
             Language::En => "Rest for N seconds:",
@@ -247,6 +253,7 @@ impl Texts {
         }
     }
 
+    #[cfg(target_os = "macos")]
     pub const fn choose_language_message(&self) -> &'static str {
         match self.lang {
             Language::En => "Choose your preferred language.",
@@ -254,6 +261,7 @@ impl Texts {
         }
     }
 
+    #[cfg(target_os = "macos")]
     pub const fn choose_language_note(&self) -> &'static str {
         match self.lang {
             Language::En => "Auto follows your system language.",
@@ -261,6 +269,7 @@ impl Texts {
         }
     }
 
+    #[cfg(target_os = "macos")]
     pub const fn ok_button(&self) -> &'static str {
         match self.lang {
             Language::En => "OK",
@@ -268,6 +277,7 @@ impl Texts {
         }
     }
 
+    #[cfg(target_os = "macos")]
     pub const fn visit_homepage_button(&self) -> &'static str {
         match self.lang {
             Language::En => "Visit homepage",
@@ -310,8 +320,7 @@ impl Texts {
                 "Current settings:\n\nBreak every {interval_minutes} minutes for {break_seconds} seconds.\n\nAfter saving, the timer will restart from now.\n\nReset to defaults (30 min / 120 sec)?"
             ),
             Language::Zh => format!(
-                "当前配置：\n\n每 {} 分钟休息 {} 秒\n\n保存后将从现在开始重新计时。\n\n是否使用默认配置（30分钟/120秒）？",
-                interval_minutes, break_seconds
+                "当前配置：\n\n每 {interval_minutes} 分钟休息 {break_seconds} 秒\n\n保存后将从现在开始重新计时。\n\n是否使用默认配置（30分钟/120秒）？"
             ),
         }
     }
@@ -346,6 +355,7 @@ pub fn detect_system_language() -> Language {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 pub fn detect_system_language_env() -> Language {
     for key in ["LC_ALL", "LC_MESSAGES", "LANG"] {
         if let Some(v) = std::env::var_os(key) {
@@ -357,6 +367,7 @@ pub fn detect_system_language_env() -> Language {
     Language::En
 }
 
+#[cfg(not(target_os = "windows"))]
 pub fn language_from_tag(tag: &str) -> Option<Language> {
     let s = tag.trim();
     if s.is_empty() {

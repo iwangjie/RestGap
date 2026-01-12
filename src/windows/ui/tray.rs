@@ -24,6 +24,7 @@ use super::super::utils::{approx_duration, format_hhmm, to_wide_array, to_wide_s
 use crate::i18n::{LanguagePreference, Texts};
 
 /// 设置系统托盘图标
+#[allow(clippy::too_many_lines)]
 pub fn setup_tray_icon(hwnd: HWND) {
     let config = with_state_ref(|s| s.config.clone());
     let texts = Texts::new(config.effective_language());
