@@ -36,10 +36,12 @@ impl LanguagePreference {
     }
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub struct Texts {
     lang: Language,
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 impl Texts {
     pub const fn new(lang: Language) -> Self {
         Self { lang }
@@ -380,6 +382,7 @@ fn detect_system_language_macos() -> Language {
     crate::macos::locale::detect_system_language()
 }
 
+#[cfg(target_os = "macos")]
 pub fn first_quoted(s: &str) -> Option<&str> {
     let mut in_quote = false;
     let mut start = 0usize;
