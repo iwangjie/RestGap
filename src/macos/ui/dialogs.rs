@@ -6,7 +6,7 @@ use objc2::rc::Retained;
 use objc2::{MainThreadOnly, msg_send};
 use objc2_app_kit::{
     NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertThirdButtonReturn,
-    NSTextField, NSView,
+    NSApplication, NSTextField, NSView,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 
@@ -71,6 +71,7 @@ fn open_language_dialog(delegate: &RestGapDelegate) {
 /// 打开配置对话框
 pub fn open_settings_dialog(delegate: &RestGapDelegate) {
     let mtm = delegate.mtm();
+    NSApplication::sharedApplication(mtm).activateIgnoringOtherApps(true);
 
     let current = with_state_ref(|s| s.config.clone());
     let texts = Texts::new(current.effective_language());

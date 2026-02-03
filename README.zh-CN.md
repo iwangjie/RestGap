@@ -61,6 +61,7 @@ cargo build --release
 ## 配置
 
 **macOS**: 点击菜单栏里的"配置"，设置"每 N 分钟休息 N 秒"。配置会保存在系统偏好里（`NSUserDefaults`）。
+（若菜单栏图标在刘海屏/图标过多时被系统隐藏，可在 Spotlight **再次** 打开 `RestGap`（应用已在后台运行时），会自动弹出配置窗口。）
 
 **Windows/Linux**: 编辑配置文件：
 - Windows: `%APPDATA%\restgap\config.json`

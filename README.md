@@ -65,6 +65,7 @@ Tip: On macOS, `./start.sh`, `./stop.sh`, and `./status.sh` are provided for run
 ## Configuration
 
 **macOS**: Menu bar → Settings → set "every N minutes, break for N seconds". Settings are saved in `NSUserDefaults`.
+(If the menu bar item is hidden due to a notch / too many menu bar icons, re-open `RestGap` from Spotlight while it’s running to bring up the Settings dialog.)
 
 **Windows/Linux**: Edit the configuration file at:
 - Windows: `%APPDATA%\restgap\config.json`

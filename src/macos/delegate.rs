@@ -3,7 +3,7 @@
 //! 定义 `NSApplicationDelegate` 实现。
 
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, NSObject};
+use objc2::runtime::{AnyObject, Bool, NSObject};
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
 
 use objc2_app_kit::{NSApplication, NSApplicationDelegate, NSMenu, NSMenuDelegate};
@@ -34,6 +34,21 @@ define_class!(
         fn application_did_finish_launching(&self, _notification: &NSNotification) {
             setup_status_item(self);
             schedule_phase(self, Phase::Working);
+        }
+
+        #[unsafe(method(applicationShouldHandleReopen:hasVisibleWindows:))]
+        fn application_should_handle_reopen(
+            &self,
+            _app: &NSApplication,
+            has_visible_windows: bool,
+        ) -> Bool {
+            // 菜单栏图标在刘海屏等场景可能被系统隐藏（空间不足时会被推入不可见区域）。
+            // 用户从 Spotlight/Finder 重新打开应用时，弹出配置对话框作为兜底入口。
+            if !has_visible_windows {
+                open_settings_dialog(self);
+                return false.into();
+            }
+            true.into()
         }
 
         #[unsafe(method(applicationShouldTerminateAfterLastWindowClosed:))]
