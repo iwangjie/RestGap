@@ -70,6 +70,12 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = [
     "NSUserDefaults",
 ] }
 objc2-core-foundation = "0.3.2"
+objc2-web-kit = { version = "0.3.2", default-features = false, features = [
+    "WKNavigation",
+    "WKWebView",
+    "block2",
+    "objc2-app-kit",
+] }
 libc = "0.2"
 
 # Windows-specific dependencies

@@ -6,11 +6,11 @@ use std::time::{Duration, Instant};
 use block2::global_block;
 use objc2::{MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSApplication, NSBackingStoreType, NSColor, NSEvent, NSEventMask, NSFont, NSScreen,
-    NSStatusWindowLevel, NSTextField, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
+    NSApplication, NSBackingStoreType, NSColor, NSEvent, NSEventMask, NSScreen,
+    NSStatusWindowLevel, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
 };
-use objc2_core_foundation::CGFloat;
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSTimer};
+use objc2_web_kit::WKWebView;
 
 use super::super::delegate::RestGapDelegate;
 use super::super::state::with_state;
@@ -20,6 +20,263 @@ use crate::i18n::Texts;
 
 const SKIP_PHRASE_SMART: &str = "i don’t care about my health.";
 const SKIP_PHRASE_ASCII: &str = "i don't care about my health.";
+
+const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aligned Kegel Guide</title>
+    <style>
+        :root {
+            --card-bg: #f2f0e9;
+            --text-main: #333333;
+            --text-sub: #757575;
+            --font-serif: 'Times New Roman', Times, serif;
+            --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            --anim-duration: 4s;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(16px, 3vh, 32px);
+            padding: clamp(24px, 5vh, 64px) 24px;
+        }
+
+        .title {
+            font-family: var(--font-sans);
+            font-size: clamp(18px, 2.4vw, 28px);
+            color: #e8e5dc;
+            text-align: center;
+        }
+
+        .countdown {
+            font-family: var(--font-sans);
+            font-size: clamp(48px, 7vw, 96px);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #f2f0e9;
+            line-height: 1;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            width: min(90vw, 600px, calc(70vh * 4 / 3.2));
+            aspect-ratio: 4 / 3.2;
+            border-radius: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .symbol-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding-top: 40px;
+        }
+
+        .symbol-text {
+            font-family: var(--font-serif);
+            font-size: clamp(120px, 18vw, 176px);
+            line-height: 1;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+        }
+
+        .bracket {
+            display: inline-block;
+            font-weight: 300;
+            animation: bracket-move var(--anim-duration) cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        }
+
+        .star {
+            display: inline-block;
+            margin: 0 20px;
+            font-weight: 400;
+            transform: translateY(25px) scale(1);
+            transform-origin: center calc(50% + 25px);
+            animation: star-breathe var(--anim-duration) cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        }
+
+        .text-area {
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding-bottom: 30px;
+        }
+
+        .status-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            font-weight: 500;
+            color: var(--text-sub);
+            position: absolute;
+            transition: opacity 0.5s;
+        }
+
+        .slash {
+            margin: 4px 0;
+            opacity: 0.5;
+            font-weight: 300;
+        }
+
+        .hint {
+            font-family: var(--font-sans);
+            font-size: clamp(14px, 2vw, 22px);
+            color: #b5b5b5;
+            text-align: center;
+            max-width: 80vw;
+        }
+
+        @keyframes bracket-move {
+            0%, 100% { transform: translateX(0); }
+            40%, 70% { transform: translateX(var(--dir)); }
+        }
+        .bracket.left { --dir: 40px; }
+        .bracket.right { --dir: -40px; }
+
+        @keyframes star-breathe {
+            0%, 100% {
+                transform: translateY(25px) scale(1.1);
+                opacity: 0.8;
+            }
+            40%, 70% {
+                transform: translateY(25px) scale(0.65);
+                opacity: 1;
+                color: #111;
+            }
+        }
+
+        .status-group.relax { animation: fade-relax var(--anim-duration) infinite; }
+        .status-group.tight { animation: fade-tight var(--anim-duration) infinite; }
+
+        @keyframes fade-relax {
+            0%, 20%, 90%, 100% { opacity: 1; filter: blur(0); }
+            30%, 80% { opacity: 0; filter: blur(4px); }
+        }
+
+        @keyframes fade-tight {
+            0%, 25%, 85%, 100% { opacity: 0; filter: blur(4px); }
+            35%, 75% { opacity: 1; filter: blur(0); }
+        }
+    </style>
+</head>
+<body>
+<div class="screen">
+    <div class="title" id="title">__TITLE__</div>
+    <div class="countdown" id="countdown">__COUNTDOWN__</div>
+    <div class="card">
+        <div class="symbol-area">
+            <div class="symbol-text">
+                <span class="bracket left">{</span>
+                <span class="star">*</span>
+                <span class="bracket right">}</span>
+            </div>
+        </div>
+
+        <div class="text-area">
+            <div class="status-group relax">
+                <span>RELAX</span>
+                <span class="slash">/</span>
+                <span>INHALE</span>
+            </div>
+
+            <div class="status-group tight">
+                <span>TIGHTEN</span>
+                <span class="slash">/</span>
+                <span>HOLD</span>
+            </div>
+        </div>
+    </div>
+    <div class="hint" id="hint">__HINT__</div>
+</div>
+<script>
+    window.setCountdown = (value) => {
+        const el = document.getElementById('countdown');
+        if (el) {
+            el.textContent = value;
+        }
+    };
+    window.setTitle = (value) => {
+        const el = document.getElementById('title');
+        if (el) {
+            el.textContent = value;
+        }
+    };
+    window.setHint = (value) => {
+        const el = document.getElementById('hint');
+        if (el) {
+            el.textContent = value;
+        }
+    };
+</script>
+</body>
+</html>
+"#;
+
+fn escape_html(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '&' => escaped.push_str("&amp;"),
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '"' => escaped.push_str("&quot;"),
+            '\'' => escaped.push_str("&#39;"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
+}
+
+fn build_kegel_html(title: &str, countdown: &str, hint: &str) -> String {
+    let mut html = KEGEL_HTML_TEMPLATE.replace("__TITLE__", &escape_html(title));
+    html = html.replace("__COUNTDOWN__", &escape_html(countdown));
+    html.replace("__HINT__", &escape_html(hint))
+}
+
+fn update_kegel_countdown(webview: &WKWebView, text: &str) {
+    let js_value = serde_json::to_string(text).unwrap_or_else(|_| "\"\"".to_string());
+    let script = format!("window.setCountdown({});", js_value);
+    let script = NSString::from_str(&script);
+    unsafe {
+        webview.evaluateJavaScript_completionHandler(&script, None);
+    }
+}
 
 define_class!(
     #[unsafe(super(NSWindow))]
@@ -124,14 +381,18 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     );
 
     // 窗口占满屏幕
-    let window_width: CGFloat = screen_frame.size.width;
-    let window_height: CGFloat = screen_frame.size.height;
     let frame = screen_frame;
 
     // 创建窗口 - 使用 Borderless 样式隐藏标题栏
     let style = NSWindowStyleMask::Borderless;
     let window: objc2::rc::Retained<CountdownWindow> = unsafe {
-        msg_send![CountdownWindow::alloc(mtm), initWithContentRect: frame styleMask: style backing: NSBackingStoreType::Buffered defer: false]
+        msg_send![
+            CountdownWindow::alloc(mtm),
+            initWithContentRect: frame
+            styleMask: style
+            backing: NSBackingStoreType::Buffered
+            defer: false
+        ]
     };
     let window: objc2::rc::Retained<NSWindow> = window.into_super();
 
@@ -148,73 +409,21 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     if let Some(content_view) = window.contentView() {
         content_view.setWantsLayer(true);
     }
-    window.setBackgroundColor(Some(&NSColor::windowBackgroundColor()));
+    window.setBackgroundColor(Some(&NSColor::blackColor()));
 
-    // 标签布局：垂直居中排列
-    let center_y = window_height / 2.0;
-    let padding: CGFloat = 40.0;
-
-    // 创建标题标签
-    let title_frame = NSRect::new(
-        NSPoint::new(padding, center_y + 60.0),
-        NSSize::new(padding.mul_add(-2.0, window_width), 50.0),
+    let html = build_kegel_html(
+        &texts.countdown_title(),
+        &format_countdown(seconds),
+        &texts.countdown_hint(),
     );
-    let title_label = {
-        let label = NSTextField::initWithFrame(NSTextField::alloc(mtm), title_frame);
-        label.setStringValue(&NSString::from_str(&texts.countdown_title()));
-        label.setBezeled(false);
-        label.setDrawsBackground(false);
-        label.setEditable(false);
-        label.setSelectable(false);
-        label.setAlignment(objc2_app_kit::NSTextAlignment::Center);
-        let font = NSFont::systemFontOfSize(36.0);
-        label.setFont(Some(&font));
-        label
-    };
-
-    // 创建倒计时标签
-    let countdown_frame = NSRect::new(
-        NSPoint::new(padding, center_y - 40.0),
-        NSSize::new(padding.mul_add(-2.0, window_width), 100.0),
-    );
-    let countdown_label = {
-        let label = NSTextField::initWithFrame(NSTextField::alloc(mtm), countdown_frame);
-        label.setStringValue(&NSString::from_str(&format_countdown(seconds)));
-        label.setBezeled(false);
-        label.setDrawsBackground(false);
-        label.setEditable(false);
-        label.setSelectable(false);
-        label.setAlignment(objc2_app_kit::NSTextAlignment::Center);
-        // 使用 boldSystemFontOfSize 代替 monospacedDigitSystemFontOfSize_weight
-        let font = NSFont::boldSystemFontOfSize(72.0);
-        label.setFont(Some(&font));
-        label
-    };
-
-    // 创建提示标签
-    let hint_frame = NSRect::new(
-        NSPoint::new(padding, center_y - 120.0),
-        NSSize::new(padding.mul_add(-2.0, window_width), 40.0),
-    );
-    let hint_label = {
-        let label = NSTextField::initWithFrame(NSTextField::alloc(mtm), hint_frame);
-        label.setStringValue(&NSString::from_str(texts.countdown_hint()));
-        label.setBezeled(false);
-        label.setDrawsBackground(false);
-        label.setEditable(false);
-        label.setSelectable(false);
-        label.setAlignment(objc2_app_kit::NSTextAlignment::Center);
-        let font = NSFont::systemFontOfSize(24.0);
-        label.setFont(Some(&font));
-        label.setTextColor(Some(&NSColor::secondaryLabelColor()));
-        label
-    };
-
-    // 添加所有子视图
+    let view_frame = NSRect::new(NSPoint::new(0.0, 0.0), frame.size);
+    let webview = unsafe { WKWebView::initWithFrame(WKWebView::alloc(mtm), view_frame) };
+    let html = NSString::from_str(&html);
+    unsafe {
+        let _ = webview.loadHTMLString_baseURL(&html, None);
+    }
     if let Some(content_view) = window.contentView() {
-        content_view.addSubview(&title_label);
-        content_view.addSubview(&countdown_label);
-        content_view.addSubview(&hint_label);
+        content_view.addSubview(&webview);
     }
 
     // 让倒计时窗口能获取键盘事件（Borderless 默认不可成为 key window）
@@ -231,7 +440,8 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     // 显示窗口
     window.makeKeyAndOrderFront(None);
 
-    // 仅在倒计时窗口存在时安装本地键盘监听器，避免非休息时任何额外开销。
+    // 仅在倒计时窗口存在时安装本地键盘监听器，
+    // 避免非休息时任何额外开销。
     let key_monitor = unsafe {
         NSEvent::addLocalMonitorForEventsMatchingMask_handler(
             NSEventMask::KeyDown,
@@ -256,7 +466,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
 
     // 保存状态
     with_state(|state| {
-        state.countdown_label = Some(countdown_label);
+        state.countdown_webview = Some(webview);
         state.countdown_timer = Some(timer);
         state.countdown_end_time = Some(end_time);
         state.countdown_key_monitor = key_monitor;
@@ -269,9 +479,6 @@ pub fn update_countdown() -> bool {
         let Some(end_time) = state.countdown_end_time else {
             return false;
         };
-        let Some(label) = state.countdown_label.as_ref() else {
-            return false;
-        };
 
         let now = Instant::now();
         if now >= end_time {
@@ -282,7 +489,9 @@ pub fn update_countdown() -> bool {
         let remaining = end_time.duration_since(now);
         let secs = remaining.as_secs();
         let text = format_countdown(secs);
-        label.setStringValue(&NSString::from_str(&text));
+        if let Some(webview) = state.countdown_webview.as_ref() {
+            update_kegel_countdown(webview, &text);
+        }
         true
     })
 }
@@ -303,7 +512,7 @@ pub fn close_countdown_window() {
         if let Some(window) = state.countdown_window.take() {
             window.orderOut(None);
         }
-        state.countdown_label = None;
+        state.countdown_webview = None;
         state.countdown_end_time = None;
         state.countdown_skip_smart_idx = 0;
         state.countdown_skip_ascii_idx = 0;

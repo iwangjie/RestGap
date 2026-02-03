@@ -7,8 +7,9 @@ use std::time::{Instant, SystemTime};
 
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
-use objc2_app_kit::{NSMenuItem, NSStatusItem, NSTextField, NSWindow};
+use objc2_app_kit::{NSMenuItem, NSStatusItem, NSWindow};
 use objc2_foundation::NSTimer;
+use objc2_web_kit::WKWebView;
 
 use super::config::Config;
 
@@ -47,7 +48,7 @@ pub struct AppState {
     pub quit_item: Option<Retained<NSMenuItem>>,
     // Countdown window state
     pub countdown_window: Option<Retained<NSWindow>>,
-    pub countdown_label: Option<Retained<NSTextField>>,
+    pub countdown_webview: Option<Retained<WKWebView>>,
     pub countdown_timer: Option<Retained<NSTimer>>,
     pub countdown_end_time: Option<Instant>,
     // Hidden skip phrase state (only used during breaks)
@@ -77,7 +78,7 @@ impl AppState {
             about_item: None,
             quit_item: None,
             countdown_window: None,
-            countdown_label: None,
+            countdown_webview: None,
             countdown_timer: None,
             countdown_end_time: None,
             countdown_key_monitor: None,
