@@ -192,7 +192,7 @@ pub fn show_about_dialog(delegate: &RestGapDelegate) {
     let resp = alert.runModal();
     if resp == NSAlertSecondButtonReturn {
         let _ = Command::new("open")
-            .arg("https://github.com/iwangjie")
+            .arg("https://github.com/iwangjie/RestGap")
             .spawn();
     }
 }

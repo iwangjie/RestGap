@@ -3,6 +3,14 @@ $ErrorActionPreference = 'Stop'
 
 Push-Location $PSScriptRoot
 try {
+  if (-not $env:RESTGAP_SKIP_PREFLIGHT) {
+    Write-Host "Running release preflight..."
+    cargo fmt --check
+    cargo clippy --all-targets --all-features -- -D warnings
+    cargo test
+    cargo build --release
+  }
+
   if (-not (Get-Command cargo-packager -ErrorAction SilentlyContinue)) {
     cargo install cargo-packager --locked
   }

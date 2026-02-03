@@ -18,6 +18,7 @@
 - `cargo fmt`: format code (uses `rustfmt.toml`).
 - `cargo clippy`: lint (project enables strict Clippy groups; keep warnings at zero).
 - `cargo test`: run unit tests (`#[cfg(test)] mod tests` inside modules).
+- `./scripts/release-preflight.sh`: release preflight (fmt check + clippy + tests + release build). Set `RESTGAP_SKIP_PREFLIGHT=1` to bypass.
 - Packaging:
   - macOS: `./package-macos.sh` (creates universal2 `.app`, then `.dmg` in `dist/`).
   - Windows: `./package-windows.ps1` (builds NSIS/WiX installers when tools are installed).
@@ -38,3 +39,8 @@
 
 - RestGap is intentionally offline (no telemetry/network); avoid adding network dependencies by default.
 - Config is platform-specific: macOS uses `NSUserDefaults`; Windows/Linux use a user config JSON file (paths documented in `README.md`).
+
+## Release Guardrails
+
+- Toolchain is pinned via `rust-toolchain.toml` to keep CI/local Clippy consistent.
+- Packaging scripts run release preflight unless `RESTGAP_SKIP_PREFLIGHT=1` is set.

@@ -3,11 +3,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-if command -v rustup >/dev/null 2>&1; then
-  CARGO_CMD=(rustup run stable cargo)
-else
-  CARGO_CMD=(cargo)
-fi
+CARGO_CMD=(cargo)
+
+./scripts/release-preflight.sh
 
 if ! command -v cargo-packager >/dev/null 2>&1; then
   "${CARGO_CMD[@]}" install cargo-packager --locked
