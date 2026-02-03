@@ -9,7 +9,7 @@ use objc2_app_kit::{
     NSApplication, NSBackingStoreType, NSColor, NSEvent, NSEventMask, NSScreen,
     NSStatusWindowLevel, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
 };
-use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSTimer};
+use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSTimer, NSUInteger};
 use objc2_web_kit::WKWebView;
 
 use super::super::delegate::RestGapDelegate;
@@ -328,7 +328,7 @@ fn on_countdown_keydown(event: &NSEvent) {
     };
 
     with_state(|state| {
-        if state.countdown_window.is_none() {
+        if state.countdown_windows.is_empty() {
             return;
         }
         if state.countdown_skip_requested {
@@ -377,77 +377,97 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
         play_sound("Glass");
     }
 
-    // 获取主屏幕尺寸
-    let screen_frame = NSScreen::mainScreen(mtm).map_or(
-        NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(1920.0, 1080.0)),
-        |s| s.frame(),
-    );
-
-    // 窗口占满屏幕
-    let frame = screen_frame;
-
-    // 创建窗口 - 使用 Borderless 样式隐藏标题栏
-    let style = NSWindowStyleMask::Borderless;
-    let window: objc2::rc::Retained<CountdownWindow> = unsafe {
-        msg_send![
-            CountdownWindow::alloc(mtm),
-            initWithContentRect: frame
-            styleMask: style
-            backing: NSBackingStoreType::Buffered
-            defer: false
-        ]
-    };
-    let window: objc2::rc::Retained<NSWindow> = window.into_super();
-
-    // 设置窗口属性
-    window.setLevel(NSStatusWindowLevel); // 使用状态窗口级别，确保在最前
-    window.setMovable(false); // 不可移动/拖动
-
-    // 设置窗口在所有工作空间可见，并且始终在最前
-    window.setCollectionBehavior(
-        NSWindowCollectionBehavior::CanJoinAllSpaces | NSWindowCollectionBehavior::Stationary,
-    );
-
-    // 设置背景色
-    if let Some(content_view) = window.contentView() {
-        content_view.setWantsLayer(true);
-    }
     let background = NSColor::colorWithSRGBRed_green_blue_alpha(
         242.0 / 255.0,
         240.0 / 255.0,
         233.0 / 255.0,
         1.0,
     );
-    window.setBackgroundColor(Some(&background));
+    // 收集所有屏幕的 frame（多屏幕时逐屏覆盖）
+    let screens = NSScreen::screens(mtm);
+    let screen_count = screens.count();
+    let mut frames = Vec::new();
+    if screen_count == 0 {
+        frames.push(NSScreen::mainScreen(mtm).map_or(
+            NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(1920.0, 1080.0)),
+            |s| s.frame(),
+        ));
+    } else {
+        let mut idx: NSUInteger = 0;
+        while idx < screen_count {
+            let screen = screens.objectAtIndex(idx);
+            frames.push(screen.frame());
+            idx += 1;
+        }
+    }
 
+    let mut windows = Vec::with_capacity(frames.len());
+    let mut webviews = Vec::with_capacity(frames.len());
     let html = build_kegel_html(
         &texts.countdown_title(),
         &format_countdown(seconds),
         texts.countdown_hint(),
     );
-    let view_frame = NSRect::new(NSPoint::new(0.0, 0.0), frame.size);
-    let webview = unsafe { WKWebView::initWithFrame(WKWebView::alloc(mtm), view_frame) };
     let html = NSString::from_str(&html);
-    unsafe {
-        let _ = webview.loadHTMLString_baseURL(&html, None);
-    }
-    if let Some(content_view) = window.contentView() {
-        content_view.addSubview(&webview);
+    for frame in frames {
+        // 创建窗口 - 使用 Borderless 样式隐藏标题栏
+        let style = NSWindowStyleMask::Borderless;
+        let window: objc2::rc::Retained<CountdownWindow> = unsafe {
+            msg_send![
+                CountdownWindow::alloc(mtm),
+                initWithContentRect: frame
+                styleMask: style
+                backing: NSBackingStoreType::Buffered
+                defer: false
+            ]
+        };
+        let window: objc2::rc::Retained<NSWindow> = window.into_super();
+
+        // 设置窗口属性
+        window.setLevel(NSStatusWindowLevel); // 使用状态窗口级别，确保在最前
+        window.setMovable(false); // 不可移动/拖动
+
+        // 设置窗口在所有工作空间可见，并且始终在最前
+        window.setCollectionBehavior(
+            NSWindowCollectionBehavior::CanJoinAllSpaces | NSWindowCollectionBehavior::Stationary,
+        );
+
+        // 设置背景色
+        if let Some(content_view) = window.contentView() {
+            content_view.setWantsLayer(true);
+        }
+        window.setBackgroundColor(Some(&background));
+
+        let view_frame = NSRect::new(NSPoint::new(0.0, 0.0), frame.size);
+        let webview = unsafe { WKWebView::initWithFrame(WKWebView::alloc(mtm), view_frame) };
+        unsafe {
+            let _ = webview.loadHTMLString_baseURL(&html, None);
+        }
+        if let Some(content_view) = window.contentView() {
+            content_view.addSubview(&webview);
+        }
+
+        windows.push(window);
+        webviews.push(webview);
     }
 
     // 让倒计时窗口能获取键盘事件（Borderless 默认不可成为 key window）
     NSApplication::sharedApplication(mtm).activateIgnoringOtherApps(true);
 
     // 先标记窗口存在，避免用户刚弹窗就开始输入时被忽略
+    let windows_for_state = windows.clone();
     with_state(|state| {
-        state.countdown_window = Some(window.clone());
+        state.countdown_windows = windows_for_state;
+        state.countdown_webviews = webviews;
         state.countdown_skip_smart_idx = 0;
         state.countdown_skip_ascii_idx = 0;
         state.countdown_skip_requested = false;
     });
 
     // 显示窗口
-    window.makeKeyAndOrderFront(None);
+    for window in &windows {
+        window.makeKeyAndOrderFront(None);
+    }
 
     // 仅在倒计时窗口存在时安装本地键盘监听器，
     // 避免非休息时任何额外开销。
@@ -475,7 +495,6 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
 
     // 保存状态
     with_state(|state| {
-        state.countdown_webview = Some(webview);
         state.countdown_timer = Some(timer);
         state.countdown_end_time = Some(end_time);
         state.countdown_key_monitor = key_monitor;
@@ -498,7 +517,7 @@ pub fn update_countdown() -> bool {
         let remaining = end_time.duration_since(now);
         let secs = remaining.as_secs();
         let text = format_countdown(secs);
-        if let Some(webview) = state.countdown_webview.as_ref() {
+        for webview in &state.countdown_webviews {
             update_kegel_countdown(webview, &text);
         }
         true
@@ -518,10 +537,10 @@ pub fn close_countdown_window() {
             timer.invalidate();
         }
         // 使用 orderOut 而不是 close，避免触发窗口关闭事件导致应用退出
-        if let Some(window) = state.countdown_window.take() {
+        for window in state.countdown_windows.drain(..) {
             window.orderOut(None);
         }
-        state.countdown_webview = None;
+        state.countdown_webviews.clear();
         state.countdown_end_time = None;
         state.countdown_skip_smart_idx = 0;
         state.countdown_skip_ascii_idx = 0;

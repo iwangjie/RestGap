@@ -92,7 +92,7 @@ define_class!(
         #[unsafe(method(countdownTick:))]
         fn countdown_tick(&self, _timer: &NSTimer) {
             // 检查窗口是否仍然存在，防止重复调用
-            let window_exists = with_state_ref(|state| state.countdown_window.is_some());
+            let window_exists = with_state_ref(|state| !state.countdown_windows.is_empty());
             if !window_exists {
                 return;
             }

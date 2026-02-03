@@ -47,8 +47,8 @@ pub struct AppState {
     pub about_item: Option<Retained<NSMenuItem>>,
     pub quit_item: Option<Retained<NSMenuItem>>,
     // Countdown window state
-    pub countdown_window: Option<Retained<NSWindow>>,
-    pub countdown_webview: Option<Retained<WKWebView>>,
+    pub countdown_windows: Vec<Retained<NSWindow>>,
+    pub countdown_webviews: Vec<Retained<WKWebView>>,
     pub countdown_timer: Option<Retained<NSTimer>>,
     pub countdown_end_time: Option<Instant>,
     // Hidden skip phrase state (only used during breaks)
@@ -77,8 +77,8 @@ impl AppState {
             language_zh_item: None,
             about_item: None,
             quit_item: None,
-            countdown_window: None,
-            countdown_webview: None,
+            countdown_windows: Vec::new(),
+            countdown_webviews: Vec::new(),
             countdown_timer: None,
             countdown_end_time: None,
             countdown_key_monitor: None,
