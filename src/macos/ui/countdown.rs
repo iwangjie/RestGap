@@ -29,9 +29,12 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
     <title>Aligned Kegel Guide</title>
     <style>
         :root {
+            --page-bg: #f2f0e9;
             --card-bg: #f2f0e9;
             --text-main: #333333;
             --text-sub: #757575;
+            --text-strong: #1f1f1f;
+            --text-muted: #6b6b6b;
             --font-serif: 'Times New Roman', Times, serif;
             --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             --anim-duration: 4s;
@@ -45,7 +48,7 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             margin: 0;
             padding: 0;
             height: 100vh;
-            background-color: #000;
+            background-color: var(--page-bg);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -66,7 +69,7 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         .title {
             font-family: var(--font-sans);
             font-size: clamp(18px, 2.4vw, 28px);
-            color: #e8e5dc;
+            color: var(--text-strong);
             text-align: center;
         }
 
@@ -75,7 +78,7 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             font-size: clamp(48px, 7vw, 96px);
             font-weight: 700;
             font-variant-numeric: tabular-nums;
-            color: #f2f0e9;
+            color: var(--text-strong);
             line-height: 1;
         }
 
@@ -83,13 +86,13 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             background-color: var(--card-bg);
             width: min(90vw, 600px, calc(70vh * 4 / 3.2));
             aspect-ratio: 4 / 3.2;
-            border-radius: 30px;
+            border-radius: 0;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             position: relative;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            box-shadow: none;
         }
 
         .symbol-area {
@@ -157,7 +160,7 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         .hint {
             font-family: var(--font-sans);
             font-size: clamp(14px, 2vw, 22px);
-            color: #b5b5b5;
+            color: var(--text-muted);
             text-align: center;
             max-width: 80vw;
         }
@@ -409,7 +412,13 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     if let Some(content_view) = window.contentView() {
         content_view.setWantsLayer(true);
     }
-    window.setBackgroundColor(Some(&NSColor::blackColor()));
+    let background = NSColor::colorWithSRGBRed_green_blue_alpha(
+        242.0 / 255.0,
+        240.0 / 255.0,
+        233.0 / 255.0,
+        1.0,
+    );
+    window.setBackgroundColor(Some(&background));
 
     let html = build_kegel_html(
         &texts.countdown_title(),
