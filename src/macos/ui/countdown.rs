@@ -274,7 +274,7 @@ fn build_kegel_html(title: &str, countdown: &str, hint: &str) -> String {
 
 fn update_kegel_countdown(webview: &WKWebView, text: &str) {
     let js_value = serde_json::to_string(text).unwrap_or_else(|_| "\"\"".to_string());
-    let script = format!("window.setCountdown({});", js_value);
+    let script = format!("window.setCountdown({js_value});");
     let script = NSString::from_str(&script);
     unsafe {
         webview.evaluateJavaScript_completionHandler(&script, None);
@@ -423,7 +423,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     let html = build_kegel_html(
         &texts.countdown_title(),
         &format_countdown(seconds),
-        &texts.countdown_hint(),
+        texts.countdown_hint(),
     );
     let view_frame = NSRect::new(NSPoint::new(0.0, 0.0), frame.size);
     let webview = unsafe { WKWebView::initWithFrame(WKWebView::alloc(mtm), view_frame) };
