@@ -14,7 +14,7 @@ RestGap is a lightweight, event-driven break reminder application built in pure 
 ## Tech Stack
 
 - Rust (Edition 2024)
-- **macOS**: AppKit/Foundation bindings via `objc2`, `objc2-app-kit`, `objc2-foundation`
+- **macOS**: AppKit/Foundation/WebKit bindings via `objc2`, `objc2-app-kit`, `objc2-foundation`, `objc2-web-kit`
 - **Windows/Linux**: Cross-platform configuration storage via `serde` and `dirs`
 - Packaging: `cargo-packager` (+ `hdiutil` for `.dmg` on macOS)
 
@@ -24,6 +24,7 @@ RestGap is a lightweight, event-driven break reminder application built in pure 
 - Pure Rust implementation
 - Configurable work interval & break duration
 - Break countdown (fullscreen on macOS, console on Windows/Linux)
+- macOS break screen includes a Kegel-guided breathing animation
 - No accounts, no telemetry, no network requests
 - Configuration stored in platform-appropriate locations:
   - **macOS**: `NSUserDefaults` (system preferences)
@@ -42,6 +43,11 @@ RestGap is a lightweight, event-driven break reminder application built in pure 
 
 <img width="2880" height="1800" alt="3214f6f2fa29810e5c37aaff6790a49b" src="https://github.com/user-attachments/assets/eae4781b-d4d8-49d4-9bfb-ba8809786381" />
 
+## Recent Updates (2026-02-03)
+
+- macOS fullscreen break screen adds a Kegel animation guide
+- Release preflight script `./scripts/release-preflight.sh` (fmt/clippy/test/release build)
+- Toolchain pinned via `rust-toolchain.toml` to keep CI/local Clippy consistent
 
 ## Run
 
@@ -107,6 +113,8 @@ cargo packager --release --formats default
 ```
 
 Packaging config lives in `Cargo.toml` under `[package.metadata.packager]`. Before distribution, change `identifier = "com.example.restgap"` to your own reverse-domain identifier.
+
+By default, packaging scripts run `./scripts/release-preflight.sh`. Set `RESTGAP_SKIP_PREFLIGHT=1` to bypass.
 
 ## Platform-Specific Notes
 

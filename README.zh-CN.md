@@ -15,7 +15,7 @@
 ## 技术栈
 
 - Rust（Edition 2024）
-- **macOS**: AppKit/Foundation 绑定，使用 `objc2`、`objc2-app-kit`、`objc2-foundation`
+- **macOS**: AppKit/Foundation/WebKit 绑定，使用 `objc2`、`objc2-app-kit`、`objc2-foundation`、`objc2-web-kit`
 - **Windows/Linux**: 跨平台配置存储，使用 `serde` 和 `dirs`
 - 打包：`cargo-packager`（配合 `hdiutil` 生成 `.dmg`，仅 macOS）
 
@@ -25,6 +25,7 @@
 - 纯 Rust 实现
 - 休息间隔/休息时长可配置
 - 休息倒计时（macOS 全屏窗口，Windows/Linux 控制台）
+- macOS 休息界面内置提肛呼吸引导动画
 - 无账号、无遥测、无联网请求
 - 配置存储在平台适当的位置：
   - **macOS**: `NSUserDefaults`（系统偏好设置）
@@ -37,6 +38,12 @@
 <img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/764e9c38-3561-4144-af0c-c36a5fd96699" />
 
 <img width="1880" height="800" alt="3214f6f2fa29810e5c37aaff6790a49b" src="https://github.com/user-attachments/assets/eae4781b-d4d8-49d4-9bfb-ba8809786381" />
+
+## 最近更新（2026-02-03）
+
+- macOS 全屏休息界面新增提肛动画引导
+- 发版前置检查脚本 `./scripts/release-preflight.sh`（fmt/clippy/test/release build）
+- 通过 `rust-toolchain.toml` 固定 Rust/Clippy 版本，避免 CI 漂移
 
 ## 运行
 
@@ -102,6 +109,8 @@ cargo packager --release --formats default
 ```
 
 打包配置在 `Cargo.toml` 的 `[package.metadata.packager]`；正式分发前建议把 `identifier = "com.example.restgap"` 改成你自己的反向域名标识。
+
+默认情况下，打包脚本会先执行 `./scripts/release-preflight.sh`。如需跳过，设置 `RESTGAP_SKIP_PREFLIGHT=1`。
 
 ## 平台特定说明
 
