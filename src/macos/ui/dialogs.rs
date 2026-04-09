@@ -68,7 +68,7 @@ fn open_language_dialog(delegate: &RestGapDelegate) {
     refresh_menu_info();
 }
 
-fn skip_break_status_text(texts: &Texts, enabled: bool) -> &'static str {
+const fn skip_break_status_text(texts: &Texts, enabled: bool) -> &'static str {
     if enabled {
         texts.settings_skip_break_enabled()
     } else {
@@ -77,6 +77,7 @@ fn skip_break_status_text(texts: &Texts, enabled: bool) -> &'static str {
 }
 
 /// 打开配置对话框
+#[allow(clippy::too_many_lines)]
 pub fn open_settings_dialog(delegate: &RestGapDelegate) {
     let mtm = delegate.mtm();
     NSApplication::sharedApplication(mtm).activateIgnoringOtherApps(true);
@@ -201,12 +202,7 @@ pub fn open_settings_dialog(delegate: &RestGapDelegate) {
         break;
     }
 
-    let new_config = Config {
-        interval_minutes: draft.interval_minutes,
-        break_seconds: draft.break_seconds,
-        language: draft.language,
-        allow_skip_break: draft.allow_skip_break,
-    };
+    let new_config = draft;
     new_config.save();
 
     let phase = with_state(|state| {

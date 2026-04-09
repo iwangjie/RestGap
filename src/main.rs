@@ -1,6 +1,6 @@
 //! `RestGap` (息间) - macOS 休息提醒应用
 //!
-//! 使用原生 AppKit / WebKit 构建，仅支持 macOS，
+//! 使用原生 `AppKit` / `WebKit` 构建，仅支持 macOS，
 //! 采用事件驱动架构而非轮询，追求极低的 CPU 和内存占用。
 
 pub(crate) mod i18n;
