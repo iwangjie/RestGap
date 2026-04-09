@@ -23,12 +23,14 @@ pub fn schedule_phase(phase: Phase) {
         }
 
         state.phase = phase;
+        let started_at = Instant::now();
         let duration = match phase {
             Phase::Working => state.config.work_interval(),
             Phase::Breaking => state.config.break_duration(),
         };
 
-        state.phase_deadline_mono = Some(Instant::now() + duration);
+        state.phase_started_at_mono = Some(started_at);
+        state.phase_deadline_mono = Some(started_at + duration);
         state.phase_deadline_wall = Some(SystemTime::now() + duration);
 
         #[allow(clippy::cast_possible_truncation)]
@@ -68,16 +70,28 @@ fn notify(event: NotifyEvent, config: &Config) {
 
 /// 定时器触发时的阶段转换
 pub fn transition_on_timer() {
-    let (next_phase, event, config) = with_state(|state| {
+    let transition = with_state(|state| {
         state.phase_timer_id.take();
         let config = state.config.clone();
         match state.phase {
-            Phase::Working => (Phase::Breaking, NotifyEvent::BreakStart, config),
-            Phase::Breaking => (Phase::Working, NotifyEvent::BreakEnd, config),
+            Phase::Working => {
+                let should_skip = state
+                    .phase_started_at_mono
+                    .is_some_and(|started_at| crate::idle::should_skip_break(started_at.elapsed()));
+                if should_skip {
+                    (Phase::Working, None, config)
+                } else {
+                    (Phase::Breaking, Some(NotifyEvent::BreakStart), config)
+                }
+            }
+            Phase::Breaking => (Phase::Working, Some(NotifyEvent::BreakEnd), config),
         }
     });
 
-    notify(event, &config);
+    let (next_phase, event, config) = transition;
+    if let Some(event) = event {
+        notify(event, &config);
+    }
     schedule_phase(next_phase);
 }
 
