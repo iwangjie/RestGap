@@ -1,20 +1,20 @@
 [package]
 name = "restgap"
-version = "1.4.2"
+version = "1.5.0"
 edition = "2024"
 authors = ["iwangjie <345127857@qq.com>"]
-description = "息间（RestGap）— 跨平台休息提醒应用（macOS/Windows/Linux）"
+description = "息间（RestGap）— 仅支持 macOS 的休息提醒应用"
 readme = "README.md"
 homepage = "https://github.com/iwangjie/restgap"
 repository = "https://github.com/iwangjie/restgap"
 license = "MIT"
-keywords = ["cross-platform", "break-reminder", "rest", "health", "timer"]
+keywords = ["macos", "break-reminder", "rest", "health", "timer"]
 categories = ["command-line-utilities"]
 rust-version = "1.85"
 
 [package.metadata.packager]
 product-name = "RestGap"
-description = "息间（RestGap）— 跨平台休息提醒应用（macOS/Windows/Linux）"
+description = "息间（RestGap）— 仅支持 macOS 的休息提醒应用"
 identifier = "com.example.restgap"
 out-dir = "dist"
 binaries-dir = "target/release"
@@ -26,12 +26,9 @@ before-packaging-command = "cargo build --release"
 background-app = true
 
 [dependencies]
-# Cross-platform dependencies
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-dirs = "5.0"
 
-# macOS-specific dependencies
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = "0.6"
 objc2 = "0.6.3"
@@ -77,21 +74,6 @@ objc2-web-kit = { version = "0.3.2", default-features = false, features = [
     "objc2-app-kit",
 ] }
 libc = "0.2"
-
-# Windows-specific dependencies
-[target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.58", features = [
-    "Win32_Foundation",
-    "Win32_Globalization",
-    "Win32_System_LibraryLoader",
-    "Win32_System_SystemInformation",
-    "Win32_System_Threading",
-    "Win32_UI_Input_KeyboardAndMouse",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_UI_Shell",
-    "Win32_Graphics_Gdi",
-    "Win32_Media_Audio",
-]}
 
 [dev-dependencies]
 # 测试相关依赖（未来可添加）

@@ -54,27 +54,7 @@ fn current_idle_duration() -> Option<Duration> {
     Some(Duration::from_secs_f64(seconds))
 }
 
-#[cfg(target_os = "windows")]
-#[allow(unsafe_code)]
-fn current_idle_duration() -> Option<Duration> {
-    use windows::Win32::System::SystemInformation::GetTickCount;
-    use windows::Win32::UI::Input::KeyboardAndMouse::{GetLastInputInfo, LASTINPUTINFO};
-
-    let mut last_input = LASTINPUTINFO {
-        cbSize: u32::try_from(std::mem::size_of::<LASTINPUTINFO>()).ok()?,
-        ..Default::default()
-    };
-
-    if !unsafe { GetLastInputInfo(&raw mut last_input) }.as_bool() {
-        return None;
-    }
-
-    let now = unsafe { GetTickCount() };
-    let idle_ms = now.wrapping_sub(last_input.dwTime);
-    Some(Duration::from_millis(u64::from(idle_ms)))
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(not(target_os = "macos"))]
 const fn current_idle_duration() -> Option<Duration> {
     None
 }
