@@ -15,6 +15,7 @@ pub struct Config {
     pub interval_minutes: u64,
     pub break_seconds: u64,
     pub language: LanguagePreference,
+    pub allow_skip_break: bool,
 }
 
 impl Config {
@@ -30,6 +31,7 @@ impl Config {
     const KEY_INTERVAL_MINUTES: &'static str = "restgap.interval_minutes";
     const KEY_BREAK_SECONDS: &'static str = "restgap.break_seconds";
     const KEY_LANGUAGE: &'static str = "restgap.language";
+    const KEY_ALLOW_SKIP_BREAK: &'static str = "restgap.allow_skip_break";
 
     const LEGACY_KEY_INTERVAL_MINUTES: &'static str = "restp.interval_minutes";
     const LEGACY_KEY_BREAK_SECONDS: &'static str = "restp.break_seconds";
@@ -41,6 +43,7 @@ impl Config {
         let interval_key = NSString::from_str(Self::KEY_INTERVAL_MINUTES);
         let break_key = NSString::from_str(Self::KEY_BREAK_SECONDS);
         let language_key = NSString::from_str(Self::KEY_LANGUAGE);
+        let allow_skip_key = NSString::from_str(Self::KEY_ALLOW_SKIP_BREAK);
 
         let legacy_interval_key = NSString::from_str(Self::LEGACY_KEY_INTERVAL_MINUTES);
         let legacy_break_key = NSString::from_str(Self::LEGACY_KEY_BREAK_SECONDS);
@@ -48,6 +51,7 @@ impl Config {
         let interval_raw = defaults.integerForKey(&interval_key);
         let break_raw = defaults.integerForKey(&break_key);
         let language_raw = defaults.integerForKey(&language_key);
+        let allow_skip_break = defaults.boolForKey(&allow_skip_key);
 
         let interval_raw = if interval_raw <= 0 {
             defaults.integerForKey(&legacy_interval_key)
@@ -90,6 +94,7 @@ impl Config {
                 Self::MAX_BREAK_SECONDS,
             ),
             language,
+            allow_skip_break,
         }
     }
 
@@ -99,6 +104,7 @@ impl Config {
         let interval_key = NSString::from_str(Self::KEY_INTERVAL_MINUTES);
         let break_key = NSString::from_str(Self::KEY_BREAK_SECONDS);
         let language_key = NSString::from_str(Self::KEY_LANGUAGE);
+        let allow_skip_key = NSString::from_str(Self::KEY_ALLOW_SKIP_BREAK);
 
         let interval_minutes = NSInteger::try_from(self.interval_minutes).unwrap_or(NSInteger::MAX);
         let break_seconds = NSInteger::try_from(self.break_seconds).unwrap_or(NSInteger::MAX);
@@ -112,6 +118,7 @@ impl Config {
             LanguagePreference::Zh => 2,
         };
         defaults.setInteger_forKey(language_raw, &language_key);
+        defaults.setBool_forKey(self.allow_skip_break, &allow_skip_key);
     }
 
     pub fn effective_language(&self) -> Language {
@@ -147,6 +154,7 @@ impl Default for Config {
             interval_minutes: Self::DEFAULT_INTERVAL_MINUTES,
             break_seconds: Self::DEFAULT_BREAK_SECONDS,
             language: LanguagePreference::Auto,
+            allow_skip_break: false,
         }
     }
 }
@@ -173,6 +181,7 @@ mod tests {
         assert_eq!(config.interval_minutes, Config::DEFAULT_INTERVAL_MINUTES);
         assert_eq!(config.break_seconds, Config::DEFAULT_BREAK_SECONDS);
         assert_eq!(config.language, LanguagePreference::Auto);
+        assert!(!config.allow_skip_break);
     }
 
     #[test]
@@ -181,6 +190,7 @@ mod tests {
             interval_minutes: 30,
             break_seconds: 120,
             language: LanguagePreference::Auto,
+            allow_skip_break: false,
         };
         assert_eq!(config.work_interval(), Duration::from_secs(1800));
     }
@@ -191,6 +201,7 @@ mod tests {
             interval_minutes: 30,
             break_seconds: 120,
             language: LanguagePreference::Auto,
+            allow_skip_break: false,
         };
         assert_eq!(config.break_duration(), Duration::from_secs(120));
     }

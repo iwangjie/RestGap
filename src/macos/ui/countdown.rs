@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use block2::global_block;
 use objc2::{MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSApplication, NSBackingStoreType, NSColor, NSEvent, NSEventMask, NSScreen,
+    NSApplication, NSBackingStoreType, NSColor, NSEvent, NSEventMask, NSMenu, NSScreen,
     NSStatusWindowLevel, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
 };
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSTimer, NSUInteger};
@@ -17,9 +17,7 @@ use super::super::state::with_state;
 use super::super::utils::{format_countdown, play_sound};
 use super::status_bar::target_anyobject;
 use crate::i18n::Texts;
-
-const SKIP_PHRASE_SMART: &str = "i don’t care about my health.";
-const SKIP_PHRASE_ASCII: &str = "i don't care about my health.";
+use crate::skip_challenge::{Feedback, SkipChallenge, Snapshot};
 
 const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
 <html lang="zh-CN">
@@ -29,14 +27,15 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
     <title>Aligned Kegel Guide</title>
     <style>
         :root {
-            --page-bg: #f2f0e9;
-            --card-bg: #f2f0e9;
-            --text-main: #333333;
-            --text-sub: #757575;
-            --text-strong: #1f1f1f;
-            --text-muted: #6b6b6b;
-            --font-serif: 'Times New Roman', Times, serif;
-            --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            --page-bg: radial-gradient(circle at top, #f7f3ea 0%, #ece5d8 46%, #e5dccf 100%);
+            --card-bg: rgba(255, 250, 243, 0.78);
+            --card-border: rgba(123, 97, 74, 0.14);
+            --text-main: #40342d;
+            --text-sub: #7f6e61;
+            --text-strong: #241d19;
+            --text-muted: #8d7c6f;
+            --font-serif: 'New York', 'Times New Roman', Times, serif;
+            --font-sans: 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             --anim-duration: 4s;
         }
 
@@ -48,11 +47,39 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             margin: 0;
             padding: 0;
             height: 100vh;
-            background-color: var(--page-bg);
+            background: var(--page-bg);
             display: flex;
             justify-content: center;
             align-items: center;
             user-select: none;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            overflow: hidden;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: auto;
+            width: 42vw;
+            height: 42vw;
+            border-radius: 50%;
+            filter: blur(22px);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        body::before {
+            top: -10vw;
+            left: -8vw;
+            background: rgba(255, 255, 255, 0.45);
+        }
+
+        body::after {
+            right: -10vw;
+            bottom: -12vw;
+            background: rgba(217, 190, 160, 0.26);
         }
 
         .screen {
@@ -68,7 +95,9 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
 
         .title {
             font-family: var(--font-sans);
-            font-size: clamp(18px, 2.4vw, 28px);
+            font-size: clamp(18px, 2.2vw, 28px);
+            font-weight: 560;
+            letter-spacing: 0.02em;
             color: var(--text-strong);
             text-align: center;
         }
@@ -77,22 +106,26 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             font-family: var(--font-sans);
             font-size: clamp(48px, 7vw, 96px);
             font-weight: 700;
+            letter-spacing: -0.04em;
             font-variant-numeric: tabular-nums;
             color: var(--text-strong);
             line-height: 1;
+            text-shadow: 0 10px 30px rgba(255, 255, 255, 0.42);
         }
 
         .card {
-            background-color: var(--card-bg);
+            background: linear-gradient(180deg, rgba(255,255,255,0.72) 0%, var(--card-bg) 100%);
             width: min(90vw, 600px, calc(70vh * 4 / 3.2));
             aspect-ratio: 4 / 3.2;
-            border-radius: 0;
+            border-radius: 32px;
+            border: 1px solid var(--card-border);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             position: relative;
-            box-shadow: none;
+            box-shadow: 0 26px 60px rgba(73, 52, 37, 0.12);
+            backdrop-filter: blur(12px);
         }
 
         .symbol-area {
@@ -106,22 +139,17 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
 
         .symbol-text {
             font-family: var(--font-serif);
-            font-size: clamp(120px, 18vw, 176px);
+            font-size: clamp(180px, 26vw, 300px);
             line-height: 1;
             color: var(--text-main);
             display: flex;
             align-items: center;
-        }
-
-        .bracket {
-            display: inline-block;
-            font-weight: 300;
-            animation: bracket-move var(--anim-duration) cubic-bezier(0.45, 0, 0.55, 1) infinite;
+            text-shadow: 0 8px 24px rgba(255, 255, 255, 0.28);
         }
 
         .star {
             display: inline-block;
-            margin: 0 20px;
+            margin: 0;
             font-weight: 400;
             transform: translateY(25px) scale(1);
             transform-origin: center calc(50% + 25px);
@@ -163,24 +191,82 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             color: var(--text-muted);
             text-align: center;
             max-width: 80vw;
+            letter-spacing: 0.02em;
         }
 
-        @keyframes bracket-move {
-            0%, 100% { transform: translateX(0); }
-            40%, 70% { transform: translateX(var(--dir)); }
+        .skip-card {
+            width: min(76vw, 820px);
+            padding: 18px 20px 20px;
+            border-radius: 24px;
+            border: 1px solid rgba(84, 63, 48, 0.1);
+            background: rgba(255, 252, 248, 0.72);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            box-shadow: 0 18px 42px rgba(76, 56, 38, 0.08);
+            backdrop-filter: blur(10px);
         }
-        .bracket.left { --dir: 40px; }
-        .bracket.right { --dir: -40px; }
+
+        .skip-card.failure {
+            border-color: rgba(184, 83, 61, 0.5);
+            box-shadow: 0 18px 36px rgba(184, 83, 61, 0.14);
+            animation: skip-shake 0.42s ease;
+        }
+
+        .skip-title {
+            font-family: var(--font-sans);
+            font-size: clamp(13px, 1.6vw, 16px);
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--text-sub);
+        }
+
+        .skip-phrase {
+            font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+            font-size: clamp(18px, 2vw, 28px);
+            line-height: 1.6;
+            color: var(--text-main);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .skip-char {
+            display: inline-block;
+            transition: transform 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+            padding: 0 1px;
+            border-radius: 4px;
+        }
+
+        .skip-char.matched {
+            color: #345847;
+            transform: translateY(-2px);
+        }
+
+        .skip-char.current {
+            background: rgba(52, 88, 71, 0.12);
+            color: #1f2c25;
+        }
+
+        .skip-char.pending {
+            color: #7c7c7c;
+        }
+
+        .skip-status {
+            font-family: var(--font-sans);
+            font-size: clamp(14px, 1.8vw, 18px);
+            color: var(--text-muted);
+        }
 
         @keyframes star-breathe {
             0%, 100% {
-                transform: translateY(25px) scale(1.1);
+                transform: translateY(25px) scale(1.35);
                 opacity: 0.8;
             }
             40%, 70% {
-                transform: translateY(25px) scale(0.65);
+                transform: translateY(25px) scale(0.82);
                 opacity: 1;
-                color: #111;
+                color: #18120f;
             }
         }
 
@@ -196,6 +282,14 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             0%, 25%, 85%, 100% { opacity: 0; filter: blur(4px); }
             35%, 75% { opacity: 1; filter: blur(0); }
         }
+
+        @keyframes skip-shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-6px); }
+            80% { transform: translateX(4px); }
+        }
     </style>
 </head>
 <body>
@@ -205,9 +299,7 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
     <div class="card">
         <div class="symbol-area">
             <div class="symbol-text">
-                <span class="bracket left">{</span>
                 <span class="star">*</span>
-                <span class="bracket right">}</span>
             </div>
         </div>
 
@@ -226,8 +318,14 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         </div>
     </div>
     <div class="hint" id="hint">__HINT__</div>
+    __SKIP_CARD__
 </div>
 <script>
+    const skipEnabled = __SKIP_ENABLED__;
+    let lastFailureSeq = 0;
+    window.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+    });
     window.setCountdown = (value) => {
         const el = document.getElementById('countdown');
         if (el) {
@@ -246,9 +344,40 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             el.textContent = value;
         }
     };
+    window.setSkipChallenge = (payload) => {
+        if (!skipEnabled) {
+            return;
+        }
+        const phraseEl = document.getElementById('skip-phrase');
+        const statusEl = document.getElementById('skip-status');
+        const panelEl = document.getElementById('skip-card');
+        if (!phraseEl || !statusEl || !panelEl) {
+            return;
+        }
+        if (phraseEl) {
+            phraseEl.innerHTML = payload.phraseHtml;
+        }
+        if (statusEl) {
+            statusEl.textContent = payload.status;
+        }
+        if (panelEl && payload.failureSeq !== lastFailureSeq) {
+            panelEl.classList.remove('failure');
+            void panelEl.offsetWidth;
+            panelEl.classList.add('failure');
+            lastFailureSeq = payload.failureSeq;
+        }
+    };
 </script>
 </body>
 </html>
+"#;
+
+const SKIP_CARD_TEMPLATE: &str = r#"
+    <div class="skip-card" id="skip-card">
+        <div class="skip-title" id="skip-title">__SKIP_TITLE__</div>
+        <div class="skip-phrase" id="skip-phrase">__SKIP_PHRASE_HTML__</div>
+        <div class="skip-status" id="skip-status">__SKIP_STATUS__</div>
+    </div>
 "#;
 
 fn escape_html(value: &str) -> String {
@@ -266,15 +395,74 @@ fn escape_html(value: &str) -> String {
     escaped
 }
 
-fn build_kegel_html(title: &str, countdown: &str, hint: &str) -> String {
+fn render_skip_phrase_html(snapshot: &Snapshot) -> String {
+    let mut html = String::new();
+    for (idx, ch) in snapshot.phrase.chars().enumerate() {
+        let class = if idx < snapshot.matched_len {
+            "matched"
+        } else if idx == snapshot.matched_len && snapshot.feedback != Feedback::Completed {
+            "current"
+        } else {
+            "pending"
+        };
+        html.push_str("<span class=\"skip-char ");
+        html.push_str(class);
+        html.push_str("\">");
+        html.push_str(&escape_html(&ch.to_string()));
+        html.push_str("</span>");
+    }
+    html
+}
+
+fn skip_status_text(texts: &Texts, snapshot: &Snapshot) -> String {
+    match snapshot.feedback {
+        Feedback::Completed => texts.countdown_skip_success().to_string(),
+        Feedback::Mismatch => texts.countdown_skip_mismatch().to_string(),
+        Feedback::Timeout => texts.countdown_skip_timeout().to_string(),
+        Feedback::Ready | Feedback::Progress => {
+            texts.countdown_skip_progress(snapshot.matched_len, snapshot.total_len)
+        }
+    }
+}
+
+fn build_kegel_html(
+    title: &str,
+    countdown: &str,
+    hint: &str,
+    skip_section: Option<(&str, String, String)>,
+) -> String {
     let mut html = KEGEL_HTML_TEMPLATE.replace("__TITLE__", &escape_html(title));
     html = html.replace("__COUNTDOWN__", &escape_html(countdown));
-    html.replace("__HINT__", &escape_html(hint))
+    html = html.replace("__HINT__", &escape_html(hint));
+    if let Some((skip_title, skip_phrase_html, skip_status)) = skip_section {
+        let skip_card = SKIP_CARD_TEMPLATE
+            .replace("__SKIP_TITLE__", &escape_html(skip_title))
+            .replace("__SKIP_PHRASE_HTML__", &skip_phrase_html)
+            .replace("__SKIP_STATUS__", &escape_html(&skip_status));
+        html = html.replace("__SKIP_CARD__", &skip_card);
+        html.replace("__SKIP_ENABLED__", "true")
+    } else {
+        html = html.replace("__SKIP_CARD__", "");
+        html.replace("__SKIP_ENABLED__", "false")
+    }
 }
 
 fn update_kegel_countdown(webview: &WKWebView, text: &str) {
     let js_value = serde_json::to_string(text).unwrap_or_else(|_| "\"\"".to_string());
     let script = format!("window.setCountdown({js_value});");
+    let script = NSString::from_str(&script);
+    unsafe {
+        webview.evaluateJavaScript_completionHandler(&script, None);
+    }
+}
+
+fn update_kegel_skip_challenge(webview: &WKWebView, texts: &Texts, snapshot: &Snapshot) {
+    let payload = serde_json::json!({
+        "phraseHtml": render_skip_phrase_html(snapshot),
+        "status": skip_status_text(texts, snapshot),
+        "failureSeq": snapshot.failure_seq,
+    });
+    let script = format!("window.setSkipChallenge({payload});");
     let script = NSString::from_str(&script);
     unsafe {
         webview.evaluateJavaScript_completionHandler(&script, None);
@@ -301,32 +489,28 @@ define_class!(
     }
 );
 
-fn advance_phrase_idx(idx: &mut usize, phrase: &str, ch: char) -> bool {
-    let mut buf = [0u8; 4];
-    let ch_bytes = ch.encode_utf8(&mut buf).as_bytes();
-    let phrase_bytes = phrase.as_bytes();
+define_class!(
+    #[unsafe(super(WKWebView))]
+    #[thread_kind = MainThreadOnly]
+    pub struct CountdownWebView;
 
-    if *idx + ch_bytes.len() <= phrase_bytes.len()
-        && &phrase_bytes[*idx..(*idx + ch_bytes.len())] == ch_bytes
-    {
-        *idx += ch_bytes.len();
-        return *idx == phrase_bytes.len();
-    }
+    unsafe impl NSObjectProtocol for CountdownWebView {}
 
-    // 朴素回退：短语以 'I' 开头且几乎不重叠，足够可靠。
-    *idx = 0;
-    if ch_bytes.len() <= phrase_bytes.len() && &phrase_bytes[..ch_bytes.len()] == ch_bytes {
-        *idx = ch_bytes.len();
-        return *idx == phrase_bytes.len();
+    impl CountdownWebView {
+        #[unsafe(method(menuForEvent:))]
+        fn menu_for_event(&self, _event: &NSEvent) -> *mut NSMenu {
+            ptr::null_mut()
+        }
     }
-    false
-}
+);
 
 fn on_countdown_keydown(event: &NSEvent) {
     let Some(text) = event.charactersIgnoringModifiers().map(|s| s.to_string()) else {
         return;
     };
 
+    let texts = Texts::new(with_state(|state| state.config.effective_language()));
+    let mut render = None;
     with_state(|state| {
         if state.countdown_windows.is_empty() {
             return;
@@ -334,25 +518,25 @@ fn on_countdown_keydown(event: &NSEvent) {
         if state.countdown_skip_requested {
             return;
         }
+        let Some(challenge) = state.countdown_skip_challenge.as_mut() else {
+            return;
+        };
 
         for ch in text.chars() {
-            let ch = if ch.is_ascii() {
-                ch.to_ascii_lowercase()
-            } else {
-                ch
-            };
-            let smart_done =
-                advance_phrase_idx(&mut state.countdown_skip_smart_idx, SKIP_PHRASE_SMART, ch);
-            let ascii_done =
-                advance_phrase_idx(&mut state.countdown_skip_ascii_idx, SKIP_PHRASE_ASCII, ch);
-            if smart_done || ascii_done {
+            let result = challenge.register_char(ch, Instant::now());
+            render = Some((state.countdown_webviews.clone(), result.snapshot));
+            if result.completed {
                 state.countdown_skip_requested = true;
-                state.countdown_skip_smart_idx = 0;
-                state.countdown_skip_ascii_idx = 0;
                 break;
             }
         }
     });
+
+    if let Some((webviews, snapshot)) = render {
+        for webview in &webviews {
+            update_kegel_skip_challenge(webview, &texts, &snapshot);
+        }
+    }
 }
 
 global_block! {
@@ -367,7 +551,14 @@ global_block! {
 #[allow(clippy::too_many_lines)]
 pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_start_sound: bool) {
     let mtm = delegate.mtm();
-    let texts = Texts::new(with_state(|state| state.config.effective_language()));
+    let (texts, allow_skip_break) = with_state(|state| {
+        (
+            Texts::new(state.config.effective_language()),
+            state.config.allow_skip_break,
+        )
+    });
+    let skip_challenge = allow_skip_break.then(SkipChallenge::random);
+    let skip_snapshot = skip_challenge.as_ref().map(SkipChallenge::snapshot);
 
     // 关闭已存在的倒计时窗口
     close_countdown_window();
@@ -407,6 +598,13 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
         &texts.countdown_title(),
         &format_countdown(seconds),
         texts.countdown_hint(),
+        skip_snapshot.as_ref().map(|snapshot| {
+            (
+                texts.countdown_skip_title(),
+                render_skip_phrase_html(snapshot),
+                skip_status_text(&texts, snapshot),
+            )
+        }),
     );
     let html = NSString::from_str(&html);
     for frame in frames {
@@ -439,7 +637,9 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
         window.setBackgroundColor(Some(&background));
 
         let view_frame = NSRect::new(NSPoint::new(0.0, 0.0), frame.size);
-        let webview = unsafe { WKWebView::initWithFrame(WKWebView::alloc(mtm), view_frame) };
+        let webview: objc2::rc::Retained<CountdownWebView> =
+            unsafe { msg_send![CountdownWebView::alloc(mtm), initWithFrame: view_frame] };
+        let webview: objc2::rc::Retained<WKWebView> = webview.into_super();
         unsafe {
             let _ = webview.loadHTMLString_baseURL(&html, None);
         }
@@ -459,8 +659,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     with_state(|state| {
         state.countdown_windows = windows_for_state;
         state.countdown_webviews = webviews;
-        state.countdown_skip_smart_idx = 0;
-        state.countdown_skip_ascii_idx = 0;
+        state.countdown_skip_challenge = skip_challenge;
         state.countdown_skip_requested = false;
     });
 
@@ -471,11 +670,15 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
 
     // 仅在倒计时窗口存在时安装本地键盘监听器，
     // 避免非休息时任何额外开销。
-    let key_monitor = unsafe {
-        NSEvent::addLocalMonitorForEventsMatchingMask_handler(
-            NSEventMask::KeyDown,
-            &COUNTDOWN_KEY_MONITOR,
-        )
+    let key_monitor = if allow_skip_break {
+        unsafe {
+            NSEvent::addLocalMonitorForEventsMatchingMask_handler(
+                NSEventMask::KeyDown,
+                &COUNTDOWN_KEY_MONITOR,
+            )
+        }
+    } else {
+        None
     };
 
     // 设置结束时间
@@ -542,8 +745,7 @@ pub fn close_countdown_window() {
         }
         state.countdown_webviews.clear();
         state.countdown_end_time = None;
-        state.countdown_skip_smart_idx = 0;
-        state.countdown_skip_ascii_idx = 0;
+        state.countdown_skip_challenge = None;
         state.countdown_skip_requested = false;
     });
 }

@@ -68,100 +68,144 @@ fn open_language_dialog(delegate: &RestGapDelegate) {
     refresh_menu_info();
 }
 
+fn skip_break_status_text(texts: &Texts, enabled: bool) -> &'static str {
+    if enabled {
+        texts.settings_skip_break_enabled()
+    } else {
+        texts.settings_skip_break_disabled()
+    }
+}
+
 /// 打开配置对话框
 pub fn open_settings_dialog(delegate: &RestGapDelegate) {
     let mtm = delegate.mtm();
     NSApplication::sharedApplication(mtm).activateIgnoringOtherApps(true);
 
-    let current = with_state_ref(|s| s.config.clone());
-    let texts = Texts::new(current.effective_language());
+    let mut draft = with_state_ref(|s| s.config.clone());
 
-    let alert: Retained<NSAlert> = unsafe { msg_send![NSAlert::alloc(mtm), init] };
-    alert.setMessageText(&NSString::from_str(texts.settings_title()));
-    alert.setInformativeText(&NSString::from_str(texts.settings_informative_text()));
-    let _ = alert.addButtonWithTitle(&NSString::from_str(texts.settings_save_button()));
-    let _ = alert.addButtonWithTitle(&NSString::from_str(texts.settings_language_button()));
-    let _ = alert.addButtonWithTitle(&NSString::from_str(texts.settings_cancel_button()));
+    loop {
+        let texts = Texts::new(draft.effective_language());
 
-    let accessory_frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(320.0, 78.0));
-    let accessory = NSView::initWithFrame(NSView::alloc(mtm), accessory_frame);
+        let alert: Retained<NSAlert> = unsafe { msg_send![NSAlert::alloc(mtm), init] };
+        alert.setMessageText(&NSString::from_str(texts.settings_title()));
+        alert.setInformativeText(&NSString::from_str(texts.settings_informative_text()));
+        let _ = alert.addButtonWithTitle(&NSString::from_str(texts.settings_save_button()));
+        let _ = alert.addButtonWithTitle(&NSString::from_str(texts.settings_language_button()));
+        let _ = alert.addButtonWithTitle(&NSString::from_str(
+            texts.settings_skip_break_button(draft.allow_skip_break),
+        ));
+        let _ = alert.addButtonWithTitle(&NSString::from_str(texts.settings_cancel_button()));
 
-    let label_style = |label: &NSTextField| {
-        label.setBezeled(false);
-        label.setDrawsBackground(false);
-        label.setEditable(false);
-        label.setSelectable(false);
-    };
+        let accessory_frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(320.0, 112.0));
+        let accessory = NSView::initWithFrame(NSView::alloc(mtm), accessory_frame);
 
-    let minutes_label_frame = NSRect::new(NSPoint::new(0.0, 44.0), NSSize::new(160.0, 20.0));
-    let minutes_label = NSTextField::initWithFrame(NSTextField::alloc(mtm), minutes_label_frame);
-    minutes_label.setStringValue(&NSString::from_str(texts.settings_interval_label()));
-    label_style(&minutes_label);
+        let label_style = |label: &NSTextField| {
+            label.setBezeled(false);
+            label.setDrawsBackground(false);
+            label.setEditable(false);
+            label.setSelectable(false);
+        };
 
-    let minutes_input_frame = NSRect::new(NSPoint::new(170.0, 40.0), NSSize::new(130.0, 24.0));
-    let minutes_input = NSTextField::initWithFrame(NSTextField::alloc(mtm), minutes_input_frame);
-    minutes_input.setStringValue(&NSString::from_str(&current.interval_minutes.to_string()));
+        let minutes_label_frame = NSRect::new(NSPoint::new(0.0, 78.0), NSSize::new(160.0, 20.0));
+        let minutes_label =
+            NSTextField::initWithFrame(NSTextField::alloc(mtm), minutes_label_frame);
+        minutes_label.setStringValue(&NSString::from_str(texts.settings_interval_label()));
+        label_style(&minutes_label);
 
-    let seconds_label_frame = NSRect::new(NSPoint::new(0.0, 10.0), NSSize::new(160.0, 20.0));
-    let seconds_label = NSTextField::initWithFrame(NSTextField::alloc(mtm), seconds_label_frame);
-    seconds_label.setStringValue(&NSString::from_str(texts.settings_break_label()));
-    label_style(&seconds_label);
+        let minutes_input_frame = NSRect::new(NSPoint::new(170.0, 74.0), NSSize::new(130.0, 24.0));
+        let minutes_input =
+            NSTextField::initWithFrame(NSTextField::alloc(mtm), minutes_input_frame);
+        minutes_input.setStringValue(&NSString::from_str(&draft.interval_minutes.to_string()));
 
-    let seconds_input_frame = NSRect::new(NSPoint::new(170.0, 6.0), NSSize::new(130.0, 24.0));
-    let seconds_input = NSTextField::initWithFrame(NSTextField::alloc(mtm), seconds_input_frame);
-    seconds_input.setStringValue(&NSString::from_str(&current.break_seconds.to_string()));
+        let seconds_label_frame = NSRect::new(NSPoint::new(0.0, 44.0), NSSize::new(160.0, 20.0));
+        let seconds_label =
+            NSTextField::initWithFrame(NSTextField::alloc(mtm), seconds_label_frame);
+        seconds_label.setStringValue(&NSString::from_str(texts.settings_break_label()));
+        label_style(&seconds_label);
 
-    accessory.addSubview(&minutes_label);
-    accessory.addSubview(&minutes_input);
-    accessory.addSubview(&seconds_label);
-    accessory.addSubview(&seconds_input);
+        let seconds_input_frame = NSRect::new(NSPoint::new(170.0, 40.0), NSSize::new(130.0, 24.0));
+        let seconds_input =
+            NSTextField::initWithFrame(NSTextField::alloc(mtm), seconds_input_frame);
+        seconds_input.setStringValue(&NSString::from_str(&draft.break_seconds.to_string()));
 
-    alert.setAccessoryView(Some(&accessory));
+        let skip_label_frame = NSRect::new(NSPoint::new(0.0, 10.0), NSSize::new(160.0, 20.0));
+        let skip_label = NSTextField::initWithFrame(NSTextField::alloc(mtm), skip_label_frame);
+        skip_label.setStringValue(&NSString::from_str(texts.settings_skip_break_label()));
+        label_style(&skip_label);
 
-    let resp = alert.runModal();
-    if resp == NSAlertSecondButtonReturn {
-        open_language_dialog(delegate);
-        return;
-    }
-    if resp != NSAlertFirstButtonReturn {
-        return;
-    }
+        let skip_value_frame = NSRect::new(NSPoint::new(170.0, 10.0), NSSize::new(130.0, 20.0));
+        let skip_value = NSTextField::initWithFrame(NSTextField::alloc(mtm), skip_value_frame);
+        skip_value.setStringValue(&NSString::from_str(skip_break_status_text(
+            &texts,
+            draft.allow_skip_break,
+        )));
+        label_style(&skip_value);
 
-    let interval_minutes = minutes_input
-        .stringValue()
-        .to_string()
-        .trim()
-        .parse::<u64>()
-        .ok();
-    let break_seconds = seconds_input
-        .stringValue()
-        .to_string()
-        .trim()
-        .parse::<u64>()
-        .ok();
+        accessory.addSubview(&minutes_label);
+        accessory.addSubview(&minutes_input);
+        accessory.addSubview(&seconds_label);
+        accessory.addSubview(&seconds_input);
+        accessory.addSubview(&skip_label);
+        accessory.addSubview(&skip_value);
 
-    let (Some(interval_minutes), Some(break_seconds)) = (interval_minutes, break_seconds) else {
-        show_invalid_settings_alert(delegate);
-        return;
-    };
+        alert.setAccessoryView(Some(&accessory));
 
-    if interval_minutes == 0 || break_seconds == 0 {
-        show_invalid_settings_alert(delegate);
-        return;
-    }
+        let resp = alert.runModal();
+        if resp == NSAlertSecondButtonReturn {
+            open_language_dialog(delegate);
+            draft = with_state_ref(|s| s.config.clone());
+            continue;
+        }
+        if resp == NSAlertThirdButtonReturn {
+            draft.allow_skip_break = !draft.allow_skip_break;
+            continue;
+        }
+        if resp != NSAlertFirstButtonReturn {
+            return;
+        }
 
-    let new_config = Config {
-        interval_minutes: clamp_u64(
+        let interval_minutes = minutes_input
+            .stringValue()
+            .to_string()
+            .trim()
+            .parse::<u64>()
+            .ok();
+        let break_seconds = seconds_input
+            .stringValue()
+            .to_string()
+            .trim()
+            .parse::<u64>()
+            .ok();
+
+        let (Some(interval_minutes), Some(break_seconds)) = (interval_minutes, break_seconds)
+        else {
+            show_invalid_settings_alert(delegate);
+            return;
+        };
+
+        if interval_minutes == 0 || break_seconds == 0 {
+            show_invalid_settings_alert(delegate);
+            return;
+        }
+
+        draft.interval_minutes = clamp_u64(
             interval_minutes,
             Config::MIN_INTERVAL_MINUTES,
             Config::MAX_INTERVAL_MINUTES,
-        ),
-        break_seconds: clamp_u64(
+        );
+        draft.break_seconds = clamp_u64(
             break_seconds,
             Config::MIN_BREAK_SECONDS,
             Config::MAX_BREAK_SECONDS,
-        ),
-        language: current.language,
+        );
+        break;
+    }
+
+    let new_config = Config {
+        interval_minutes: draft.interval_minutes,
+        break_seconds: draft.break_seconds,
+        language: draft.language,
+        allow_skip_break: draft.allow_skip_break,
     };
     new_config.save();
 

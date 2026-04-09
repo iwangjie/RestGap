@@ -12,6 +12,7 @@ use objc2_foundation::NSTimer;
 use objc2_web_kit::WKWebView;
 
 use super::config::Config;
+use crate::skip_challenge::SkipChallenge;
 
 /// 工作阶段
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -32,6 +33,7 @@ pub enum NotifyEvent {
 pub struct AppState {
     pub config: Config,
     pub phase: Phase,
+    pub phase_started_at_mono: Option<Instant>,
     pub phase_deadline_mono: Option<Instant>,
     pub phase_deadline_wall: Option<SystemTime>,
     pub timer: Option<Retained<NSTimer>>,
@@ -51,10 +53,9 @@ pub struct AppState {
     pub countdown_webviews: Vec<Retained<WKWebView>>,
     pub countdown_timer: Option<Retained<NSTimer>>,
     pub countdown_end_time: Option<Instant>,
-    // Hidden skip phrase state (only used during breaks)
+    // 跳过挑战状态（仅在休息时使用）
     pub countdown_key_monitor: Option<Retained<AnyObject>>,
-    pub countdown_skip_smart_idx: usize,
-    pub countdown_skip_ascii_idx: usize,
+    pub countdown_skip_challenge: Option<SkipChallenge>,
     pub countdown_skip_requested: bool,
 }
 
@@ -63,6 +64,7 @@ impl AppState {
         Self {
             config,
             phase: Phase::Working,
+            phase_started_at_mono: None,
             phase_deadline_mono: None,
             phase_deadline_wall: None,
             timer: None,
@@ -82,8 +84,7 @@ impl AppState {
             countdown_timer: None,
             countdown_end_time: None,
             countdown_key_monitor: None,
-            countdown_skip_smart_idx: 0,
-            countdown_skip_ascii_idx: 0,
+            countdown_skip_challenge: None,
             countdown_skip_requested: false,
         }
     }

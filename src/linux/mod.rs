@@ -106,19 +106,29 @@ pub fn run() {
         } else {
             let remaining = state.time_until_break();
             if remaining == Duration::ZERO {
-                // Time for a break!
-                state.is_breaking = true;
-                state.break_start = Some(Instant::now());
-                let break_secs = state.config.break_seconds;
-                match lang {
-                    Language::Zh => println!("\n休息时间！请休息 {break_secs} 秒\n"),
-                    Language::En => {
-                        println!("\nBreak time! Please rest for {break_secs} seconds\n");
+                if crate::idle::should_skip_break(state.work_start.elapsed()) {
+                    state.work_start = Instant::now();
+                    match lang {
+                        Language::Zh => println!("\n本轮几乎无操作，已跳过本次休息。\n"),
+                        Language::En => {
+                            println!("\nThis cycle was nearly idle, so the break was skipped.\n");
+                        }
                     }
-                }
+                } else {
+                    // Time for a break!
+                    state.is_breaking = true;
+                    state.break_start = Some(Instant::now());
+                    let break_secs = state.config.break_seconds;
+                    match lang {
+                        Language::Zh => println!("\n休息时间！请休息 {break_secs} 秒\n"),
+                        Language::En => {
+                            println!("\nBreak time! Please rest for {break_secs} seconds\n");
+                        }
+                    }
 
-                // In a full implementation, this would show a fullscreen window
-                // For now, we just print to console
+                    // In a full implementation, this would show a fullscreen window
+                    // For now, we just print to console
+                }
             } else if remaining.as_secs() % 60 == 0 && remaining.as_secs() > 0 {
                 // Print update every minute
                 let minutes = remaining.as_secs() / 60;

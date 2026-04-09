@@ -15,6 +15,8 @@ pub struct Config {
     pub break_seconds: u64,
     #[serde(default)]
     pub language: LanguagePreference,
+    #[serde(default)]
+    pub allow_skip_break: bool,
 }
 
 impl Config {
@@ -33,6 +35,7 @@ impl Config {
             interval_minutes: Self::DEFAULT_INTERVAL_MINUTES,
             break_seconds: Self::DEFAULT_BREAK_SECONDS,
             language: LanguagePreference::Auto,
+            allow_skip_break: false,
         }
     }
 

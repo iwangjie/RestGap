@@ -254,6 +254,45 @@ impl Texts {
     }
 
     #[cfg(target_os = "macos")]
+    pub const fn settings_skip_break_label(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Allow skipping a break:",
+            Language::Zh => "允许跳过休息：",
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub const fn settings_skip_break_enabled(&self) -> &'static str {
+        match self.lang {
+            Language::En => "On",
+            Language::Zh => "开启",
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub const fn settings_skip_break_disabled(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Off",
+            Language::Zh => "关闭",
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub const fn settings_skip_break_button(&self, enabled: bool) -> &'static str {
+        if enabled {
+            match self.lang {
+                Language::En => "Skip: On",
+                Language::Zh => "跳过：开",
+            }
+        } else {
+            match self.lang {
+                Language::En => "Skip: Off",
+                Language::Zh => "跳过：关",
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
     pub const fn choose_language_message(&self) -> &'static str {
         match self.lang {
             Language::En => "Choose your preferred language.",
@@ -336,6 +375,41 @@ impl Texts {
         match self.lang {
             Language::En => "Relax your eyes, stretch your body",
             Language::Zh => "放松眼睛，伸展身体",
+        }
+    }
+
+    pub const fn countdown_skip_title(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Type this sentence to skip",
+            Language::Zh => "输入这句话才可跳过",
+        }
+    }
+
+    pub fn countdown_skip_progress(&self, matched: usize, total: usize) -> String {
+        match self.lang {
+            Language::En => format!("Matched {matched}/{total} · each character must be within 2s"),
+            Language::Zh => format!("已匹配 {matched}/{total} · 相邻字符间隔不能超过 2 秒"),
+        }
+    }
+
+    pub const fn countdown_skip_timeout(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Timed out. Restart from the beginning.",
+            Language::Zh => "输入超时，请从头开始。",
+        }
+    }
+
+    pub const fn countdown_skip_mismatch(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Mismatch. Restart from the beginning.",
+            Language::Zh => "输入不匹配，请从头开始。",
+        }
+    }
+
+    pub const fn countdown_skip_success(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Matched. Skipping this break...",
+            Language::Zh => "匹配完成，正在跳过本次休息……",
         }
     }
 }
