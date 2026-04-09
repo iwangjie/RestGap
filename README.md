@@ -1,152 +1,147 @@
-# RestGap (息间)
-<img width="150" height="150" alt="original" src="https://github.com/user-attachments/assets/e26b58e8-2f76-43c6-9dbd-36b507d1e0a9" />
+# RestGap（息间）
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+<img width="150" height="150" alt="RestGap 图标" src="https://github.com/user-attachments/assets/e26b58e8-2f76-43c6-9dbd-36b507d1e0a9" />
 
-RestGap is a lightweight, event-driven break reminder application built in pure Rust. It supports **macOS, Windows, and Linux** platforms with minimal CPU/memory usage while keeping breaks effective.
+RestGap 是一个仅支持 macOS 的休息提醒软件，使用纯 Rust 编写，基于原生 AppKit / WebKit 实现菜单栏、设置窗口和全屏休息界面。项目目标很直接：提醒休息这件事要足够稳定、足够轻、足够不打扰。
 
-## Platform Support
+## 当前定位
 
-- **macOS**: Full GUI support with menu bar integration using native AppKit APIs
-- **Windows**: Console-based implementation with core timer functionality
-- **Linux**: Console-based implementation with core timer functionality
+- 仅支持 macOS
+- 菜单栏常驻
+- 原生设置与全屏休息倒计时
+- 无账号、无遥测、默认离线运行
+- 提供 universal2 打包产物，兼容 Intel 与 Apple Silicon
 
-## Tech Stack
+## 主要功能
 
-- Rust (Edition 2024)
-- **macOS**: AppKit/Foundation/WebKit bindings via `objc2`, `objc2-app-kit`, `objc2-foundation`, `objc2-web-kit`
-- **Windows/Linux**: Cross-platform configuration storage via `serde` and `dirs`
-- Packaging: `cargo-packager` (+ `hdiutil` for `.dmg` on macOS)
+- 可配置工作时长与休息时长
+- 支持立即开始休息
+- 休息界面包含倒计时与呼吸/提肛引导动画
+- 可选开启“允许跳过休息”
+- 默认关闭跳过功能，关闭时不会展示跳过输入区域，界面更简洁
+- 基于系统空闲时长做“几乎整轮未使用”的自动跳过判断
 
-## Features
+## 运行要求
 
-- **Cross-platform**: Runs on macOS, Windows, and Linux
-- Pure Rust implementation
-- Configurable work interval & break duration
-- Break countdown (fullscreen on macOS, console on Windows/Linux)
-- macOS break screen includes a Kegel-guided breathing animation
-- No accounts, no telemetry, no network requests
-- Configuration stored in platform-appropriate locations:
-  - **macOS**: `NSUserDefaults` (system preferences)
-  - **Windows/Linux**: JSON file in user config directory
+- macOS 13 及以上版本更稳妥
+- Rust 1.85+
+- 若要打包 `.dmg`，需要本机可用 `hdiutil`
 
-## Requirements
+## 本地运行
 
-- **macOS**: For full GUI functionality with menu bar and break window
-- **Windows/Linux**: Basic console-based timer functionality
+```bash
+cargo run
+```
 
-## Screenshot
-
-<img width="352" height="298" alt="image" src="https://github.com/user-attachments/assets/930ac760-fb87-4452-9200-2848ecb9cbf4" />
-
-<img width="352" height="298" alt="image" src="https://github.com/user-attachments/assets/764e9c38-3561-4144-af0c-c36a5fd96699" />
-
-<img width="2880" height="1800" alt="3214f6f2fa29810e5c37aaff6790a49b" src="https://github.com/user-attachments/assets/eae4781b-d4d8-49d4-9bfb-ba8809786381" />
-
-## Recent Updates (2026-02-03)
-
-- macOS fullscreen break screen adds a Kegel animation guide
-- Release preflight script `./scripts/release-preflight.sh` (fmt/clippy/test/release build)
-- Toolchain pinned via `rust-toolchain.toml` to keep CI/local Clippy consistent
-
-## Run
+或构建 release 后运行：
 
 ```bash
 cargo build --release
 ./target/release/restgap
 ```
 
-**macOS**: After launch, it shows a menu bar icon with countdown info. Menu items include: "Rest now / Settings / About / Quit".
+开发时也可以使用仓库内脚本：
 
-**Windows/Linux**: The application runs in the console and prints timer updates. It will automatically trigger breaks at configured intervals.
+```bash
+./start.sh
+./status.sh
+./stop.sh
+```
 
-Tip: On macOS, `./start.sh`, `./stop.sh`, and `./status.sh` are provided for running it in the background while developing (they create local `.pid`/`.log` files in this repo).
+## 配置说明
 
-## Configuration
+配置通过 macOS 的 `NSUserDefaults` 保存，不写独立 JSON 文件。
 
-**macOS**: Menu bar → Settings → set "every N minutes, break for N seconds". Settings are saved in `NSUserDefaults`.
-(If the menu bar item is hidden due to a notch / too many menu bar icons, re-open `RestGap` from Spotlight while it’s running to bring up the Settings dialog.)
+在菜单栏中打开“配置”后可设置：
 
-**Windows/Linux**: Edit the configuration file at:
-- Windows: `%APPDATA%\restgap\config.json`
-- Linux: `~/.config/restgap/config.json`
+- 每隔多少分钟休息一次
+- 每次休息多少秒
+- 是否允许跳过休息
+- 界面语言
 
-Or modify `src/common/config.rs` constants and rebuild.
+默认值：
 
-- Defaults: 30 minutes / 120 seconds
-- Ranges: 1–240 minutes, 5–3600 seconds
+- 工作间隔：30 分钟
+- 休息时长：120 秒
+- 允许跳过休息：关闭
 
-## Build
+数值范围：
+
+- 工作间隔：1 到 240 分钟
+- 休息时长：5 到 3600 秒
+
+## 构建与检查
+
+日常检查：
+
+```bash
+cargo fmt
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test
+```
+
+Release 构建：
 
 ```bash
 cargo build --release
 ```
 
-The release profile is optimized for small size (`opt-level="z"`, `lto`, `codegen-units=1`, `panic=abort`, `strip`).
+## 打包
 
-## Packaging (Cargo Packager)
-
-1) Install Cargo Packager:
+先安装 `cargo-packager`：
 
 ```bash
 cargo install cargo-packager --locked
 ```
 
-2) macOS artifacts (`.app` / `.dmg`):
+然后执行：
 
 ```bash
 ./package-macos.sh
-ls dist
 ```
 
-The script produces a **universal2** build (Intel + Apple Silicon) and then creates a `.dmg` via `hdiutil`.
+脚本会做这些事：
 
-If you only want to package the current architecture:
+1. 运行发布前检查
+2. 构建 universal2 二进制
+3. 生成 `.app`
+4. 生成 `.dmg`
+
+产物位于 `dist/` 目录。
+
+如果你只想跳过预检查：
 
 ```bash
-cargo packager --release --formats default
+RESTGAP_SKIP_PREFLIGHT=1 ./package-macos.sh
 ```
 
-3) Windows artifacts (`.exe` / `.msi`, requires NSIS/WiX):
+## 项目结构
 
-```powershell
-.\package-windows.ps1
-```
+- `src/main.rs`：程序入口，仅保留 macOS 平台分发
+- `src/macos/`：菜单栏、倒计时窗口、配置、日志与状态管理
+- `src/idle.rs`：系统空闲时长判定
+- `src/skip_challenge.rs`：跳过休息的英文输入挑战
+- `assets/`：图标与打包资源
+- `scripts/`：universal2 构建与 DMG 打包辅助脚本
+- `.github/workflows/ci.yml`：macOS 专用 CI / Release 流程
 
-Packaging config lives in `Cargo.toml` under `[package.metadata.packager]`. Before distribution, change `identifier = "com.example.restgap"` to your own reverse-domain identifier.
+## 发布流程
 
-By default, packaging scripts run `./scripts/release-preflight.sh`. Set `RESTGAP_SKIP_PREFLIGHT=1` to bypass.
+本仓库发布只保留 macOS：
 
-## Platform-Specific Notes
+- 推送到 `main` 会跑 macOS CI
+- 打 `vX.Y.Z` tag 会生成 `.dmg` 并上传到 GitHub Release
 
-### macOS
-- Provides full GUI functionality with native menu bar integration
-- Break countdown shows as a fullscreen window
-- Settings are stored in `NSUserDefaults`
-- Requires macOS 10.13+ (High Sierra or later)
+版本号必须与 `Cargo.toml` 一致。
 
-### Windows
-- Console-based implementation
-- Timer runs in the background and prints updates
-- Configuration stored in `%APPDATA%\restgap\config.json`
-- Future versions may add system tray support
+## 截图
 
-### Linux
-- Console-based implementation
-- Timer runs in the background and prints updates  
-- Configuration stored in `~/.config/restgap/config.json`
-- Future versions may add system tray support for desktop environments
+<img width="352" height="298" alt="菜单栏截图" src="https://github.com/user-attachments/assets/930ac760-fb87-4452-9200-2848ecb9cbf4" />
 
-## Contributing
+<img width="352" height="298" alt="设置截图" src="https://github.com/user-attachments/assets/764e9c38-3561-4144-af0c-c36a5fd96699" />
 
-Issues and PRs are welcome.
-
-```bash
-cargo fmt
-cargo clippy
-cargo test
-```
+<img width="2880" height="1800" alt="全屏休息界面截图" src="https://github.com/user-attachments/assets/eae4781b-d4d8-49d4-9bfb-ba8809786381" />
 
 ## License
 
-Not specified yet. If you plan to open-source the project, add a `LICENSE` file and update `Cargo.toml`.
+当前 `Cargo.toml` 标记为 `MIT`。如需正式开源发布，建议补齐仓库根目录 `LICENSE` 文件。

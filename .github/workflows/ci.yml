@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     tags:
       - "v*"
   pull_request:
@@ -14,11 +14,8 @@ env:
 
 jobs:
   check:
-    name: Check (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+    name: Check macOS
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -26,6 +23,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: x86_64-apple-darwin, aarch64-apple-darwin
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -48,17 +46,16 @@ jobs:
         run: cargo check --all-targets
 
   test:
-    name: Test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: Test macOS
+    runs-on: macos-latest
     needs: check
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin, aarch64-apple-darwin
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -75,7 +72,7 @@ jobs:
         run: cargo test --all-features
 
   build:
-    name: Build macOS
+    name: Build macOS Artifacts
     runs-on: macos-latest
     needs: test
     if: "!startsWith(github.ref, 'refs/tags/v')"
@@ -104,8 +101,11 @@ jobs:
       - name: Build DMG
         run: ./package-macos.sh
 
-      - name: List dist directory
-        run: ls -lah dist/
+      - name: Verify dist contents
+        run: |
+          ls -lah dist/
+          test -d dist/RestGap.app
+          ls -lah dist/*.dmg
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
@@ -113,127 +113,19 @@ jobs:
           name: restgap-macos-dmg
           path: dist/*.dmg
 
-      - name: Upload .app artifact
+      - name: Upload APP artifact
         uses: actions/upload-artifact@v4
         with:
           name: restgap-macos-app
           path: dist/*.app
-
-  build-windows:
-    name: Build Windows
-    runs-on: windows-latest
-    needs: test
-    if: "!startsWith(github.ref, 'refs/tags/v')"
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Build release
-        run: cargo build --release
-
-      - name: Test binary runs
-        run: |
-          if (Test-Path ".\target\release\restgap.exe") {
-            Write-Host "✓ Binary built successfully"
-            Write-Host ""
-            Write-Host "Testing binary execution..."
-            $job = Start-Job -ScriptBlock { 
-              & $args[0]
-            } -ArgumentList (Resolve-Path ".\target\release\restgap.exe")
-            Start-Sleep -Seconds 2
-            $state = $job.State
-            Stop-Job $job -ErrorAction SilentlyContinue
-            Remove-Job $job
-            
-            if ($state -eq "Running") {
-              Write-Host "✓ Binary started and ran successfully (stopped after timeout)"
-            } else {
-              Write-Host "✓ Binary executed (state: $state)"
-            }
-          } else {
-            Write-Host "✗ Binary not found"
-            exit 1
-          }
-
-      - name: Upload EXE artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: restgap-windows-exe
-          path: target/release/restgap.exe
-
-  build-linux:
-    name: Build Linux
-    runs-on: ubuntu-latest
-    needs: test
-    if: "!startsWith(github.ref, 'refs/tags/v')"
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Build release
-        run: cargo build --release
-
-      - name: Test binary runs
-        run: |
-          if [ -f ./target/release/restgap ]; then
-            echo "✓ Binary built successfully"
-            file ./target/release/restgap
-            echo ""
-            echo "Testing binary execution (2 second timeout)..."
-            timeout 2 ./target/release/restgap || exit_code=$?
-            if [ "${exit_code:-0}" -eq 124 ]; then
-              echo "✓ Binary started and ran (terminated by timeout as expected)"
-            elif [ "${exit_code:-0}" -eq 0 ]; then
-              echo "✓ Binary executed successfully"
-            else
-              echo "✗ Binary execution failed with exit code: ${exit_code}"
-              exit 1
-            fi
-            echo ""
-            echo "Checking dependencies..."
-            ldd ./target/release/restgap || true
-          else
-            echo "✗ Binary not found"
-            exit 1
-          fi
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: restgap-linux-binary
-          path: target/release/restgap
 
   release-macos:
     name: Release macOS
     runs-on: macos-latest
     needs: test
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -267,155 +159,25 @@ jobs:
       - name: Install cargo-packager
         run: cargo install cargo-packager --locked
 
-      - name: Build .dmg
+      - name: Build DMG
         run: ./package-macos.sh
 
-      - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-macos-dmg
-          path: dist/*.dmg
-
-  release-windows:
-    name: Release Windows
-    runs-on: windows-latest
-    needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        shell: pwsh
+      - name: Prepare release files
         run: |
-          $ErrorActionPreference = "Stop"
-
-          # rustup is preinstalled on GitHub-hosted runners, but toolchain install can be flaky on Windows.
-          for ($i = 1; $i -le 5; $i++) {
-            try {
-              rustup toolchain install stable --profile minimal --no-self-update
-              rustup default stable
-              rustc -V
-              cargo -V
-              break
-            } catch {
-              if ($i -eq 5) { throw }
-              Write-Host "Rust toolchain install failed (attempt $i/5). Retrying in 10 seconds..."
-              Start-Sleep -Seconds 10
-            }
-          }
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Build release
-        run: cargo build --release
-
-      - name: Get version
-        id: version
-        shell: pwsh
-        run: |
-          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"' | ForEach-Object { $_.Matches.Groups[1].Value })
-          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-
-      - name: Prepare release artifact
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path dist
-          Copy-Item target/release/restgap.exe dist/RestGap_${{ steps.version.outputs.VERSION }}_windows_x64.exe
-
-      - name: Upload EXE artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-windows-exe
-          path: dist/*.exe
-
-  release-linux:
-    name: Release Linux
-    runs-on: ubuntu-latest
-    needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Build release
-        run: cargo build --release
-
-      - name: Get version
-        id: version
-        run: |
-          VERSION=$(awk -F '"' '/^version =/ {print $2; exit}' Cargo.toml)
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Prepare release artifact
-        run: |
-          mkdir -p dist
-          cp target/release/restgap dist/RestGap_${{ steps.version.outputs.VERSION }}_linux_x64
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-linux-binary
-          path: dist/RestGap_*
-
-  publish-release:
-    name: Publish Release
-    runs-on: ubuntu-latest
-    needs: [release-macos, release-windows, release-linux]
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: List artifacts
-        run: find artifacts -type f
+          mkdir -p release-files
+          cp -R dist/RestGap.app release-files/
+          cp dist/*.dmg release-files/
+          ls -lah release-files/
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-
           tag="${GITHUB_REF_NAME}"
 
-          # Collect all release files
-          mkdir -p release-files
-          find artifacts -type f \( -name "*.dmg" -o -name "*.exe" -o -name "RestGap_*" \) -exec cp {} release-files/ \;
-
-          ls -la release-files/
-
-          # Create or update release
           if gh release view "${tag}" >/dev/null 2>&1; then
-            for file in release-files/*; do
-              gh release upload "${tag}" "${file}" --clobber
-            done
+            gh release upload "${tag}" release-files/* --clobber
           else
             gh release create "${tag}" release-files/* --title "${tag}" --generate-notes
           fi

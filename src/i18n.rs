@@ -36,12 +36,12 @@ impl LanguagePreference {
     }
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(target_os = "macos")]
 pub struct Texts {
     lang: Language,
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(target_os = "macos")]
 impl Texts {
     pub const fn new(lang: Language) -> Self {
         Self { lang }
@@ -160,30 +160,6 @@ impl Texts {
         }
     }
 
-    #[cfg(target_os = "windows")]
-    pub fn status_tip_working(&self, hm: &str) -> String {
-        match self.lang {
-            Language::En => format!("⏰ Next break: {hm}"),
-            Language::Zh => format!("⏰ 下次休息：{hm}"),
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    pub fn status_tip_breaking(&self, remaining: &str) -> String {
-        match self.lang {
-            Language::En => format!("☕ On break: {remaining}"),
-            Language::Zh => format!("☕ 休息中：{remaining}"),
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    pub fn tray_tip_app(&self) -> String {
-        match self.lang {
-            Language::En => format!("{} - break reminder", self.app_name_short()),
-            Language::Zh => format!("{} - 休息提醒", self.app_name_short()),
-        }
-    }
-
     pub const fn invalid_settings_title(&self) -> &'static str {
         match self.lang {
             Language::En => "Invalid settings",
@@ -299,32 +275,6 @@ impl Texts {
         }
     }
 
-    #[cfg(target_os = "windows")]
-    pub fn about_message_windows(&self) -> String {
-        match self.lang {
-            Language::En => format!(
-                "Version: {}\n\nWindows system tray break reminder (event-driven / no polling).\n\nOpen homepage?",
-                env!("CARGO_PKG_VERSION")
-            ),
-            Language::Zh => format!(
-                "版本：{}\n\nWindows 系统托盘休息提醒（事件驱动 / 非轮询）。\n\n是否访问主页？",
-                env!("CARGO_PKG_VERSION")
-            ),
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    pub fn settings_current_windows(&self, interval_minutes: u64, break_seconds: u64) -> String {
-        match self.lang {
-            Language::En => format!(
-                "Current settings:\n\nBreak every {interval_minutes} minutes for {break_seconds} seconds.\n\nAfter saving, the timer will restart from now.\n\nReset to defaults (30 min / 120 sec)?"
-            ),
-            Language::Zh => format!(
-                "当前配置：\n\n每 {interval_minutes} 分钟休息 {break_seconds} 秒\n\n保存后将从现在开始重新计时。\n\n是否使用默认配置（30分钟/120秒）？"
-            ),
-        }
-    }
-
     pub fn countdown_title(&self) -> String {
         match self.lang {
             Language::En => format!("{} · Break countdown", self.app_name_short()),
@@ -384,7 +334,7 @@ pub fn detect_system_language() -> Language {
     {
         detect_system_language_macos()
     }
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(not(target_os = "macos"))]
     {
         detect_system_language_env()
     }
@@ -416,11 +366,6 @@ pub fn language_from_tag(tag: &str) -> Option<Language> {
         return Some(Language::En);
     }
     None
-}
-
-#[cfg(target_os = "windows")]
-fn detect_system_language_windows() -> Language {
-    crate::windows::locale::detect_system_language()
 }
 
 #[cfg(target_os = "macos")]
