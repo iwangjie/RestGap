@@ -75,7 +75,7 @@ fn current_idle_duration() -> Option<Duration> {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn current_idle_duration() -> Option<Duration> {
+const fn current_idle_duration() -> Option<Duration> {
     None
 }
 
