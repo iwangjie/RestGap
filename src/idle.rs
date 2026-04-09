@@ -65,7 +65,7 @@ fn current_idle_duration() -> Option<Duration> {
         ..Default::default()
     };
 
-    if unsafe { GetLastInputInfo(&mut last_input) }.is_err() {
+    if !unsafe { GetLastInputInfo(&raw mut last_input) }.as_bool() {
         return None;
     }
 

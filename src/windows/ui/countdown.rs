@@ -463,15 +463,14 @@ pub unsafe extern "system" fn countdown_wndproc(
                         .is_some_and(|until| until > Instant::now())
                 });
                 if should_continue {
-                    let _ = InvalidateRect(hwnd, None, true);
                 } else {
                     with_state(|state| {
                         state.countdown_feedback_flash_until = None;
                         state.countdown_feedback_timer_id = None;
                     });
                     let _ = KillTimer(hwnd, COUNTDOWN_FEEDBACK_TIMER_ID);
-                    let _ = InvalidateRect(hwnd, None, true);
                 }
+                let _ = InvalidateRect(hwnd, None, true);
             }
             LRESULT(0)
         }
