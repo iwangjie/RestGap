@@ -26,11 +26,14 @@ resolve_extra_targets() {
     return
   fi
 
-  rustup target list --installed | while read -r target; do
-    if [[ "${target}" != "${host_target}" ]]; then
-      printf '%s\n' "${target}"
-    fi
-  done
+  case "${host_target}" in
+    aarch64-apple-darwin)
+      printf '%s\n' "x86_64-apple-darwin"
+      ;;
+    x86_64-apple-darwin)
+      printf '%s\n' "aarch64-apple-darwin"
+      ;;
+  esac
 }
 
 echo "Running release preflight..."

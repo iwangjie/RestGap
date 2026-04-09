@@ -278,13 +278,10 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         </div>
     </div>
     <div class="hint" id="hint">__HINT__</div>
-    <div class="skip-card" id="skip-card">
-        <div class="skip-title" id="skip-title">__SKIP_TITLE__</div>
-        <div class="skip-phrase" id="skip-phrase">__SKIP_PHRASE_HTML__</div>
-        <div class="skip-status" id="skip-status">__SKIP_STATUS__</div>
-    </div>
+    __SKIP_CARD__
 </div>
 <script>
+    const skipEnabled = __SKIP_ENABLED__;
     let lastFailureSeq = 0;
     window.addEventListener('contextmenu', (event) => {
         event.preventDefault();
@@ -308,9 +305,15 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         }
     };
     window.setSkipChallenge = (payload) => {
+        if (!skipEnabled) {
+            return;
+        }
         const phraseEl = document.getElementById('skip-phrase');
         const statusEl = document.getElementById('skip-status');
         const panelEl = document.getElementById('skip-card');
+        if (!phraseEl || !statusEl || !panelEl) {
+            return;
+        }
         if (phraseEl) {
             phraseEl.innerHTML = payload.phraseHtml;
         }
@@ -327,6 +330,14 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
 </script>
 </body>
 </html>
+"#;
+
+const SKIP_CARD_TEMPLATE: &str = r#"
+    <div class="skip-card" id="skip-card">
+        <div class="skip-title" id="skip-title">__SKIP_TITLE__</div>
+        <div class="skip-phrase" id="skip-phrase">__SKIP_PHRASE_HTML__</div>
+        <div class="skip-status" id="skip-status">__SKIP_STATUS__</div>
+    </div>
 "#;
 
 fn escape_html(value: &str) -> String {
@@ -378,16 +389,22 @@ fn build_kegel_html(
     title: &str,
     countdown: &str,
     hint: &str,
-    skip_title: &str,
-    skip_phrase_html: &str,
-    skip_status: &str,
+    skip_section: Option<(&str, String, String)>,
 ) -> String {
     let mut html = KEGEL_HTML_TEMPLATE.replace("__TITLE__", &escape_html(title));
     html = html.replace("__COUNTDOWN__", &escape_html(countdown));
     html = html.replace("__HINT__", &escape_html(hint));
-    html = html.replace("__SKIP_TITLE__", &escape_html(skip_title));
-    html = html.replace("__SKIP_PHRASE_HTML__", skip_phrase_html);
-    html.replace("__SKIP_STATUS__", &escape_html(skip_status))
+    if let Some((skip_title, skip_phrase_html, skip_status)) = skip_section {
+        let skip_card = SKIP_CARD_TEMPLATE
+            .replace("__SKIP_TITLE__", &escape_html(skip_title))
+            .replace("__SKIP_PHRASE_HTML__", &skip_phrase_html)
+            .replace("__SKIP_STATUS__", &escape_html(&skip_status));
+        html = html.replace("__SKIP_CARD__", &skip_card);
+        html.replace("__SKIP_ENABLED__", "true")
+    } else {
+        html = html.replace("__SKIP_CARD__", "");
+        html.replace("__SKIP_ENABLED__", "false")
+    }
 }
 
 fn update_kegel_countdown(webview: &WKWebView, text: &str) {
@@ -494,9 +511,14 @@ global_block! {
 #[allow(clippy::too_many_lines)]
 pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_start_sound: bool) {
     let mtm = delegate.mtm();
-    let texts = Texts::new(with_state(|state| state.config.effective_language()));
-    let skip_challenge = SkipChallenge::random();
-    let skip_snapshot = skip_challenge.snapshot();
+    let (texts, allow_skip_break) = with_state(|state| {
+        (
+            Texts::new(state.config.effective_language()),
+            state.config.allow_skip_break,
+        )
+    });
+    let skip_challenge = allow_skip_break.then(SkipChallenge::random);
+    let skip_snapshot = skip_challenge.as_ref().map(SkipChallenge::snapshot);
 
     // 关闭已存在的倒计时窗口
     close_countdown_window();
@@ -536,9 +558,13 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
         &texts.countdown_title(),
         &format_countdown(seconds),
         texts.countdown_hint(),
-        texts.countdown_skip_title(),
-        &render_skip_phrase_html(&skip_snapshot),
-        &skip_status_text(&texts, &skip_snapshot),
+        skip_snapshot.as_ref().map(|snapshot| {
+            (
+                texts.countdown_skip_title(),
+                render_skip_phrase_html(snapshot),
+                skip_status_text(&texts, snapshot),
+            )
+        }),
     );
     let html = NSString::from_str(&html);
     for frame in frames {
@@ -593,7 +619,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     with_state(|state| {
         state.countdown_windows = windows_for_state;
         state.countdown_webviews = webviews;
-        state.countdown_skip_challenge = Some(skip_challenge);
+        state.countdown_skip_challenge = skip_challenge;
         state.countdown_skip_requested = false;
     });
 
@@ -604,11 +630,15 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
 
     // 仅在倒计时窗口存在时安装本地键盘监听器，
     // 避免非休息时任何额外开销。
-    let key_monitor = unsafe {
-        NSEvent::addLocalMonitorForEventsMatchingMask_handler(
-            NSEventMask::KeyDown,
-            &COUNTDOWN_KEY_MONITOR,
-        )
+    let key_monitor = if allow_skip_break {
+        unsafe {
+            NSEvent::addLocalMonitorForEventsMatchingMask_handler(
+                NSEventMask::KeyDown,
+                &COUNTDOWN_KEY_MONITOR,
+            )
+        }
+    } else {
+        None
     };
 
     // 设置结束时间
