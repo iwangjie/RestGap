@@ -144,7 +144,10 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             color: var(--text-main);
             display: flex;
             align-items: center;
+<<<<<<< HEAD
             text-shadow: 0 8px 24px rgba(255, 255, 255, 0.28);
+=======
+>>>>>>> publish-v1.5.0
         }
 
         .star {
@@ -195,15 +198,23 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         }
 
         .skip-card {
+<<<<<<< HEAD
             width: min(76vw, 820px);
             padding: 18px 20px 20px;
             border-radius: 24px;
             border: 1px solid rgba(84, 63, 48, 0.1);
             background: rgba(255, 252, 248, 0.72);
+=======
+            width: min(80vw, 880px);
+            padding: 18px 22px 20px;
+            border: 1px solid rgba(31, 31, 31, 0.12);
+            background: rgba(255, 255, 255, 0.48);
+>>>>>>> publish-v1.5.0
             display: flex;
             flex-direction: column;
             gap: 12px;
             transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+<<<<<<< HEAD
             box-shadow: 0 18px 42px rgba(76, 56, 38, 0.08);
             backdrop-filter: blur(10px);
         }
@@ -211,13 +222,25 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         .skip-card.failure {
             border-color: rgba(184, 83, 61, 0.5);
             box-shadow: 0 18px 36px rgba(184, 83, 61, 0.14);
+=======
+        }
+
+        .skip-card.failure {
+            border-color: rgba(199, 73, 52, 0.55);
+            box-shadow: 0 16px 36px rgba(199, 73, 52, 0.12);
+>>>>>>> publish-v1.5.0
             animation: skip-shake 0.42s ease;
         }
 
         .skip-title {
             font-family: var(--font-sans);
+<<<<<<< HEAD
             font-size: clamp(13px, 1.6vw, 16px);
             letter-spacing: 0.14em;
+=======
+            font-size: clamp(14px, 1.8vw, 18px);
+            letter-spacing: 0.08em;
+>>>>>>> publish-v1.5.0
             text-transform: uppercase;
             color: var(--text-sub);
         }
@@ -239,13 +262,22 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         }
 
         .skip-char.matched {
+<<<<<<< HEAD
             color: #345847;
+=======
+            color: #244c39;
+>>>>>>> publish-v1.5.0
             transform: translateY(-2px);
         }
 
         .skip-char.current {
+<<<<<<< HEAD
             background: rgba(52, 88, 71, 0.12);
             color: #1f2c25;
+=======
+            background: rgba(36, 76, 57, 0.12);
+            color: #16241b;
+>>>>>>> publish-v1.5.0
         }
 
         .skip-char.pending {
@@ -318,10 +350,20 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         </div>
     </div>
     <div class="hint" id="hint">__HINT__</div>
+<<<<<<< HEAD
     __SKIP_CARD__
 </div>
 <script>
     const skipEnabled = __SKIP_ENABLED__;
+=======
+    <div class="skip-card" id="skip-card">
+        <div class="skip-title" id="skip-title">__SKIP_TITLE__</div>
+        <div class="skip-phrase" id="skip-phrase">__SKIP_PHRASE_HTML__</div>
+        <div class="skip-status" id="skip-status">__SKIP_STATUS__</div>
+    </div>
+</div>
+<script>
+>>>>>>> publish-v1.5.0
     let lastFailureSeq = 0;
     window.addEventListener('contextmenu', (event) => {
         event.preventDefault();
@@ -345,6 +387,7 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         }
     };
     window.setSkipChallenge = (payload) => {
+<<<<<<< HEAD
         if (!skipEnabled) {
             return;
         }
@@ -354,6 +397,11 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         if (!phraseEl || !statusEl || !panelEl) {
             return;
         }
+=======
+        const phraseEl = document.getElementById('skip-phrase');
+        const statusEl = document.getElementById('skip-status');
+        const panelEl = document.getElementById('skip-card');
+>>>>>>> publish-v1.5.0
         if (phraseEl) {
             phraseEl.innerHTML = payload.phraseHtml;
         }
@@ -429,11 +477,18 @@ fn build_kegel_html(
     title: &str,
     countdown: &str,
     hint: &str,
+<<<<<<< HEAD
     skip_section: Option<(&str, String, String)>,
+=======
+    skip_title: &str,
+    skip_phrase_html: &str,
+    skip_status: &str,
+>>>>>>> publish-v1.5.0
 ) -> String {
     let mut html = KEGEL_HTML_TEMPLATE.replace("__TITLE__", &escape_html(title));
     html = html.replace("__COUNTDOWN__", &escape_html(countdown));
     html = html.replace("__HINT__", &escape_html(hint));
+<<<<<<< HEAD
     if let Some((skip_title, skip_phrase_html, skip_status)) = skip_section {
         let skip_card = SKIP_CARD_TEMPLATE
             .replace("__SKIP_TITLE__", &escape_html(skip_title))
@@ -445,6 +500,11 @@ fn build_kegel_html(
         html = html.replace("__SKIP_CARD__", "");
         html.replace("__SKIP_ENABLED__", "false")
     }
+=======
+    html = html.replace("__SKIP_TITLE__", &escape_html(skip_title));
+    html = html.replace("__SKIP_PHRASE_HTML__", skip_phrase_html);
+    html.replace("__SKIP_STATUS__", &escape_html(skip_status))
+>>>>>>> publish-v1.5.0
 }
 
 fn update_kegel_countdown(webview: &WKWebView, text: &str) {
@@ -551,6 +611,7 @@ global_block! {
 #[allow(clippy::too_many_lines)]
 pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_start_sound: bool) {
     let mtm = delegate.mtm();
+<<<<<<< HEAD
     let (texts, allow_skip_break) = with_state(|state| {
         (
             Texts::new(state.config.effective_language()),
@@ -559,6 +620,11 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     });
     let skip_challenge = allow_skip_break.then(SkipChallenge::random);
     let skip_snapshot = skip_challenge.as_ref().map(SkipChallenge::snapshot);
+=======
+    let texts = Texts::new(with_state(|state| state.config.effective_language()));
+    let skip_challenge = SkipChallenge::random();
+    let skip_snapshot = skip_challenge.snapshot();
+>>>>>>> publish-v1.5.0
 
     // 关闭已存在的倒计时窗口
     close_countdown_window();
@@ -598,6 +664,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
         &texts.countdown_title(),
         &format_countdown(seconds),
         texts.countdown_hint(),
+<<<<<<< HEAD
         skip_snapshot.as_ref().map(|snapshot| {
             (
                 texts.countdown_skip_title(),
@@ -605,6 +672,11 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
                 skip_status_text(&texts, snapshot),
             )
         }),
+=======
+        texts.countdown_skip_title(),
+        &render_skip_phrase_html(&skip_snapshot),
+        &skip_status_text(&texts, &skip_snapshot),
+>>>>>>> publish-v1.5.0
     );
     let html = NSString::from_str(&html);
     for frame in frames {
@@ -659,7 +731,11 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
     with_state(|state| {
         state.countdown_windows = windows_for_state;
         state.countdown_webviews = webviews;
+<<<<<<< HEAD
         state.countdown_skip_challenge = skip_challenge;
+=======
+        state.countdown_skip_challenge = Some(skip_challenge);
+>>>>>>> publish-v1.5.0
         state.countdown_skip_requested = false;
     });
 
