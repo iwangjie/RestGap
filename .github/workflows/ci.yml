@@ -165,7 +165,6 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release-files
-          cp -R dist/RestGap.app release-files/
           cp dist/*.dmg release-files/
           ls -lah release-files/
 
