@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use block2::global_block;
 use objc2::{MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSApplication, NSBackingStoreType, NSColor, NSEvent, NSEventMask, NSScreen,
+    NSApplication, NSBackingStoreType, NSColor, NSEvent, NSEventMask, NSMenu, NSScreen,
     NSStatusWindowLevel, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
 };
 use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSTimer, NSUInteger};
@@ -286,6 +286,9 @@ const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
 </div>
 <script>
     let lastFailureSeq = 0;
+    window.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+    });
     window.setCountdown = (value) => {
         const el = document.getElementById('countdown');
         if (el) {
@@ -429,6 +432,21 @@ define_class!(
     }
 );
 
+define_class!(
+    #[unsafe(super(WKWebView))]
+    #[thread_kind = MainThreadOnly]
+    pub struct CountdownWebView;
+
+    unsafe impl NSObjectProtocol for CountdownWebView {}
+
+    impl CountdownWebView {
+        #[unsafe(method(menuForEvent:))]
+        fn menu_for_event(&self, _event: &NSEvent) -> *mut NSMenu {
+            ptr::null_mut()
+        }
+    }
+);
+
 fn on_countdown_keydown(event: &NSEvent) {
     let Some(text) = event.charactersIgnoringModifiers().map(|s| s.to_string()) else {
         return;
@@ -553,7 +571,9 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
         window.setBackgroundColor(Some(&background));
 
         let view_frame = NSRect::new(NSPoint::new(0.0, 0.0), frame.size);
-        let webview = unsafe { WKWebView::initWithFrame(WKWebView::alloc(mtm), view_frame) };
+        let webview: objc2::rc::Retained<CountdownWebView> =
+            unsafe { msg_send![CountdownWebView::alloc(mtm), initWithFrame: view_frame] };
+        let webview: objc2::rc::Retained<WKWebView> = webview.into_super();
         unsafe {
             let _ = webview.loadHTMLString_baseURL(&html, None);
         }
