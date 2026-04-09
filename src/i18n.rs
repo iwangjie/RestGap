@@ -254,6 +254,45 @@ impl Texts {
     }
 
     #[cfg(target_os = "macos")]
+    pub const fn settings_skip_break_label(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Allow skipping a break:",
+            Language::Zh => "允许跳过休息：",
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub const fn settings_skip_break_enabled(&self) -> &'static str {
+        match self.lang {
+            Language::En => "On",
+            Language::Zh => "开启",
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub const fn settings_skip_break_disabled(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Off",
+            Language::Zh => "关闭",
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub const fn settings_skip_break_button(&self, enabled: bool) -> &'static str {
+        if enabled {
+            match self.lang {
+                Language::En => "Skip: On",
+                Language::Zh => "跳过：开",
+            }
+        } else {
+            match self.lang {
+                Language::En => "Skip: Off",
+                Language::Zh => "跳过：关",
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
     pub const fn choose_language_message(&self) -> &'static str {
         match self.lang {
             Language::En => "Choose your preferred language.",

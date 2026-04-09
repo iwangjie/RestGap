@@ -64,6 +64,7 @@ pub fn open_settings_dialog(hwnd: Option<HWND>) {
             interval_minutes: 30,
             break_seconds: 120,
             language: current.language,
+            allow_skip_break: current.allow_skip_break,
         };
         let _ = new_config.save();
 
