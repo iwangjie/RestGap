@@ -10,6 +10,8 @@
 mod common;
 
 pub(crate) mod i18n;
+pub(crate) mod idle;
+pub(crate) mod skip_challenge;
 
 #[cfg(target_os = "macos")]
 mod macos;

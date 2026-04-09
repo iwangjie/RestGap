@@ -4,9 +4,9 @@ use std::time::{Duration, Instant};
 
 use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    BeginPaint, CreateFontW, DT_CENTER, DT_SINGLELINE, DT_VCENTER, DeleteObject, DrawTextW,
-    EndPaint, FillRect, GetStockObject, HBRUSH, InvalidateRect, PAINTSTRUCT, SelectObject,
-    SetBkMode, SetTextColor, TRANSPARENT, WHITE_BRUSH,
+    BeginPaint, CreateFontW, DT_CENTER, DT_LEFT, DT_SINGLELINE, DT_TOP, DT_VCENTER, DeleteObject,
+    DrawTextW, EndPaint, FillRect, GetStockObject, HBRUSH, InvalidateRect, PAINTSTRUCT,
+    SelectObject, SetBkMode, SetTextColor, TRANSPARENT, WHITE_BRUSH,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, GetClientRect, GetSystemMetrics, HWND_TOPMOST,
@@ -17,56 +17,59 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::PCWSTR;
 
-use super::super::constants::{COUNTDOWN_TIMER_ID, COUNTDOWN_WINDOW_CLASS};
+use super::super::constants::{
+    COUNTDOWN_FEEDBACK_TIMER_ID, COUNTDOWN_TIMER_ID, COUNTDOWN_WINDOW_CLASS,
+};
 use super::super::state::{with_state, with_state_ref};
 use super::super::utils::{SoundType, format_countdown, play_sound, to_wide_string};
 use crate::i18n::Texts;
-
-const SKIP_PHRASE_SMART: &str = "i don’t care about my health.";
-const SKIP_PHRASE_ASCII: &str = "i don't care about my health.";
-
-fn advance_phrase_idx(idx: &mut usize, phrase: &str, ch: char) -> bool {
-    let mut buf = [0u8; 4];
-    let ch_bytes = ch.encode_utf8(&mut buf).as_bytes();
-    let phrase_bytes = phrase.as_bytes();
-
-    if *idx + ch_bytes.len() <= phrase_bytes.len()
-        && &phrase_bytes[*idx..(*idx + ch_bytes.len())] == ch_bytes
-    {
-        *idx += ch_bytes.len();
-        return *idx == phrase_bytes.len();
-    }
-
-    *idx = 0;
-    if ch_bytes.len() <= phrase_bytes.len() && &phrase_bytes[..ch_bytes.len()] == ch_bytes {
-        *idx = ch_bytes.len();
-        return *idx == phrase_bytes.len();
-    }
-    false
-}
+use crate::skip_challenge::{Feedback, SkipChallenge, Snapshot};
 
 fn on_countdown_char(ch: char) -> bool {
-    let ch = if ch.is_ascii() {
-        ch.to_ascii_lowercase()
-    } else {
-        ch
-    };
+    let mut completed = false;
+    let mut hwnd = None;
+    let mut should_start_feedback_timer = false;
+
     with_state(|state| {
         if state.countdown_hwnd.is_none() {
-            return false;
+            return;
         }
+        let Some(challenge) = state.countdown_skip_challenge.as_mut() else {
+            return;
+        };
 
-        let smart_done =
-            advance_phrase_idx(&mut state.countdown_skip_smart_idx, SKIP_PHRASE_SMART, ch);
-        let ascii_done =
-            advance_phrase_idx(&mut state.countdown_skip_ascii_idx, SKIP_PHRASE_ASCII, ch);
-        if smart_done || ascii_done {
-            state.countdown_skip_smart_idx = 0;
-            state.countdown_skip_ascii_idx = 0;
-            return true;
+        let result = challenge.register_char(ch, Instant::now());
+        completed = result.completed;
+        hwnd = state.countdown_hwnd;
+
+        if matches!(
+            result.snapshot.feedback,
+            Feedback::Mismatch | Feedback::Timeout
+        ) {
+            state.countdown_feedback_flash_until =
+                Some(Instant::now() + Duration::from_millis(420));
+            should_start_feedback_timer = state.countdown_feedback_timer_id.is_none();
         }
-        false
-    })
+    });
+
+    if should_start_feedback_timer {
+        if let Some(hwnd) = hwnd {
+            unsafe {
+                let _ = SetTimer(hwnd, COUNTDOWN_FEEDBACK_TIMER_ID, 60, None);
+            }
+            with_state(|state| {
+                state.countdown_feedback_timer_id = Some(COUNTDOWN_FEEDBACK_TIMER_ID);
+            });
+        }
+    }
+
+    if let Some(hwnd) = hwnd {
+        unsafe {
+            let _ = InvalidateRect(hwnd, None, true);
+        }
+    }
+
+    completed
 }
 
 const fn clamp_i32(v: i32, min: i32, max: i32) -> i32 {
@@ -87,6 +90,27 @@ const fn line_rect(full: &RECT, center_y: i32, line_height: i32) -> RECT {
         top,
         right: full.right,
         bottom,
+    }
+}
+
+fn centered_box(full: &RECT, top: i32, width: i32, height: i32) -> RECT {
+    let horizontal_margin = ((full.right - full.left) - width).max(0) / 2;
+    RECT {
+        left: full.left + horizontal_margin,
+        top,
+        right: full.right - horizontal_margin,
+        bottom: top + height,
+    }
+}
+
+fn skip_status_text(texts: &Texts, snapshot: &Snapshot) -> String {
+    match snapshot.feedback {
+        Feedback::Completed => texts.countdown_skip_success().to_string(),
+        Feedback::Mismatch => texts.countdown_skip_mismatch().to_string(),
+        Feedback::Timeout => texts.countdown_skip_timeout().to_string(),
+        Feedback::Ready | Feedback::Progress => {
+            texts.countdown_skip_progress(snapshot.matched_len, snapshot.total_len)
+        }
     }
 }
 
@@ -135,12 +159,44 @@ pub unsafe extern "system" fn countdown_wndproc(
             let base = width.min(height).max(1);
 
             let title_px = clamp_i32(base / 18, 28, 56);
-            let countdown_px = clamp_i32(base / 9, 64, 144);
+            let countdown_px = clamp_i32(base / 9, 64, 150);
+            let star_px = clamp_i32(base / 4, 180, 320);
             let hint_px = clamp_i32(base / 28, 18, 36);
+            let phrase_title_px = clamp_i32(base / 34, 18, 30);
+            let phrase_px = clamp_i32(base / 26, 24, 42);
+            let status_px = clamp_i32(base / 32, 18, 28);
 
-            let title_center_y = rect.top + height * 32 / 100;
-            let countdown_center_y = rect.top + height * 50 / 100;
-            let hint_center_y = rect.top + height * 68 / 100;
+            let title_center_y = rect.top + height * 20 / 100;
+            let countdown_center_y = rect.top + height * 32 / 100;
+            let star_center_y = rect.top + height * 50 / 100;
+            let hint_center_y = rect.top + height * 62 / 100;
+            let phrase_title_top = rect.top + height * 71 / 100;
+            let phrase_top = rect.top + height * 77 / 100;
+            let status_top = rect.top + height * 88 / 100;
+            let phrase_box_width = width * 72 / 100;
+
+            let snapshot = with_state_ref(|state| {
+                state.countdown_skip_challenge.as_ref().map_or_else(
+                    || SkipChallenge::new("").snapshot(),
+                    SkipChallenge::snapshot,
+                )
+            });
+            let horizontal_shake = with_state_ref(|state| {
+                if !matches!(snapshot.feedback, Feedback::Mismatch | Feedback::Timeout) {
+                    return 0;
+                }
+                let Some(until) = state.countdown_feedback_flash_until else {
+                    return 0;
+                };
+                let Some(remaining) = until.checked_duration_since(Instant::now()) else {
+                    return 0;
+                };
+                if (remaining.as_millis() / 60) % 2 == 0 {
+                    -8
+                } else {
+                    8
+                }
+            });
 
             // 绘制标题（自动居中，避免 DPI/字体导致的错位）
             let title =
@@ -198,6 +254,34 @@ pub unsafe extern "system" fn countdown_wndproc(
                 DT_CENTER | DT_VCENTER | DT_SINGLELINE,
             );
 
+            // 绘制提肛提醒的大星号
+            let mut star_wide: Vec<u16> = "*".encode_utf16().collect();
+            let star_font = CreateFontW(
+                -star_px,
+                0,
+                0,
+                0,
+                400,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                windows::core::w!("Times New Roman"),
+            );
+            let _ = SelectObject(hdc, star_font);
+            let mut star_rect = line_rect(&rect, star_center_y, star_px * 2);
+            let _ = SetTextColor(hdc, COLORREF(0x0025_2525));
+            let _ = DrawTextW(
+                hdc,
+                &mut star_wide,
+                &raw mut star_rect,
+                DT_CENTER | DT_VCENTER | DT_SINGLELINE,
+            );
+
             // 绘制提示文本
             let hint =
                 Texts::new(with_state_ref(|s| s.config.effective_language())).countdown_hint();
@@ -228,11 +312,137 @@ pub unsafe extern "system" fn countdown_wndproc(
                 DT_CENTER | DT_VCENTER | DT_SINGLELINE,
             );
 
+            // 绘制跳过挑战标题
+            let skip_title = Texts::new(with_state_ref(|s| s.config.effective_language()))
+                .countdown_skip_title();
+            let mut skip_title_wide: Vec<u16> = skip_title.encode_utf16().collect();
+            let phrase_title_font = CreateFontW(
+                -phrase_title_px,
+                0,
+                0,
+                0,
+                500,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                windows::core::w!("Segoe UI"),
+            );
+            let _ = SelectObject(hdc, phrase_title_font);
+            let _ = SetTextColor(hdc, COLORREF(0x0068_6868));
+            let mut skip_title_rect = centered_box(
+                &rect,
+                phrase_title_top,
+                phrase_box_width,
+                phrase_title_px * 2,
+            );
+            skip_title_rect.left += horizontal_shake;
+            skip_title_rect.right += horizontal_shake;
+            let _ = DrawTextW(
+                hdc,
+                &mut skip_title_wide,
+                &raw mut skip_title_rect,
+                DT_LEFT | DT_TOP | DT_SINGLELINE,
+            );
+
+            // 绘制目标句子
+            let phrase = snapshot.phrase;
+            let mut phrase_wide: Vec<u16> = phrase.encode_utf16().collect();
+            let phrase_font = CreateFontW(
+                -phrase_px,
+                0,
+                0,
+                0,
+                400,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                windows::core::w!("Consolas"),
+            );
+            let _ = SelectObject(hdc, phrase_font);
+            let mut phrase_rect = centered_box(&rect, phrase_top, phrase_box_width, phrase_px * 3);
+            phrase_rect.left += horizontal_shake;
+            phrase_rect.right += horizontal_shake;
+            let _ = SetTextColor(hdc, COLORREF(0x0078_7878));
+            let _ = DrawTextW(
+                hdc,
+                &mut phrase_wide,
+                &raw mut phrase_rect,
+                DT_LEFT | DT_TOP,
+            );
+
+            if snapshot.matched_len > 0 {
+                let mut matched_wide: Vec<u16> = snapshot.phrase[..snapshot.matched_len]
+                    .encode_utf16()
+                    .collect();
+                let mut matched_rect = phrase_rect;
+                let _ = SetTextColor(hdc, COLORREF(0x0038_654B));
+                let _ = DrawTextW(
+                    hdc,
+                    &mut matched_wide,
+                    &raw mut matched_rect,
+                    DT_LEFT | DT_TOP | DT_SINGLELINE,
+                );
+            }
+
+            // 绘制状态
+            let status_text = skip_status_text(
+                &Texts::new(with_state_ref(|s| s.config.effective_language())),
+                &snapshot,
+            );
+            let mut status_wide: Vec<u16> = status_text.encode_utf16().collect();
+            let status_font = CreateFontW(
+                -status_px,
+                0,
+                0,
+                0,
+                400,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                windows::core::w!("Segoe UI"),
+            );
+            let _ = SelectObject(hdc, status_font);
+            let status_color =
+                if matches!(snapshot.feedback, Feedback::Mismatch | Feedback::Timeout) {
+                    COLORREF(0x0032_5AC7)
+                } else {
+                    COLORREF(0x0078_7878)
+                };
+            let _ = SetTextColor(hdc, status_color);
+            let mut status_rect = centered_box(&rect, status_top, phrase_box_width, status_px * 2);
+            status_rect.left += horizontal_shake;
+            status_rect.right += horizontal_shake;
+            let _ = DrawTextW(
+                hdc,
+                &mut status_wide,
+                &raw mut status_rect,
+                DT_LEFT | DT_TOP,
+            );
+
             // 清理
             let _ = SelectObject(hdc, old_font);
             let _ = DeleteObject(title_font);
             let _ = DeleteObject(countdown_font);
+            let _ = DeleteObject(star_font);
             let _ = DeleteObject(hint_font);
+            let _ = DeleteObject(phrase_title_font);
+            let _ = DeleteObject(phrase_font);
+            let _ = DeleteObject(status_font);
 
             let _ = EndPaint(hwnd, &raw const ps);
             LRESULT(0)
@@ -245,6 +455,22 @@ pub unsafe extern "system" fn countdown_wndproc(
                 } else {
                     // 倒计时结束
                     finish_countdown();
+                }
+            } else if wparam.0 == COUNTDOWN_FEEDBACK_TIMER_ID {
+                let should_continue = with_state(|state| {
+                    state
+                        .countdown_feedback_flash_until
+                        .is_some_and(|until| until > Instant::now())
+                });
+                if should_continue {
+                    let _ = InvalidateRect(hwnd, None, true);
+                } else {
+                    with_state(|state| {
+                        state.countdown_feedback_flash_until = None;
+                        state.countdown_feedback_timer_id = None;
+                    });
+                    let _ = KillTimer(hwnd, COUNTDOWN_FEEDBACK_TIMER_ID);
+                    let _ = InvalidateRect(hwnd, None, true);
                 }
             }
             LRESULT(0)
@@ -342,8 +568,9 @@ pub fn show_countdown_window(seconds: u64, play_start_sound: bool) {
         state.countdown_hwnd = Some(hwnd);
         state.countdown_timer_id = Some(COUNTDOWN_TIMER_ID);
         state.countdown_end_time = Some(end_time);
-        state.countdown_skip_smart_idx = 0;
-        state.countdown_skip_ascii_idx = 0;
+        state.countdown_feedback_timer_id = None;
+        state.countdown_feedback_flash_until = None;
+        state.countdown_skip_challenge = Some(SkipChallenge::random());
     });
 }
 
@@ -373,6 +600,13 @@ pub fn close_countdown_window() {
                 let _ = KillTimer(hwnd, timer_id);
             }
         }
+        if let (Some(hwnd), Some(timer_id)) =
+            (state.countdown_hwnd, state.countdown_feedback_timer_id)
+        {
+            unsafe {
+                let _ = KillTimer(hwnd, timer_id);
+            }
+        }
 
         // 销毁窗口
         if let Some(hwnd) = state.countdown_hwnd.take() {
@@ -384,8 +618,9 @@ pub fn close_countdown_window() {
 
         state.countdown_timer_id = None;
         state.countdown_end_time = None;
-        state.countdown_skip_smart_idx = 0;
-        state.countdown_skip_ascii_idx = 0;
+        state.countdown_feedback_timer_id = None;
+        state.countdown_feedback_flash_until = None;
+        state.countdown_skip_challenge = None;
     });
 }
 

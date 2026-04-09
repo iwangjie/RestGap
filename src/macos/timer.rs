@@ -23,6 +23,7 @@ pub fn schedule_phase(delegate: &RestGapDelegate, phase: Phase) {
         }
 
         state.phase = phase;
+        let started_at = Instant::now();
         let (duration, tolerance) = match phase {
             Phase::Working => (state.config.work_interval(), state.config.work_tolerance()),
             Phase::Breaking => (
@@ -31,7 +32,8 @@ pub fn schedule_phase(delegate: &RestGapDelegate, phase: Phase) {
             ),
         };
 
-        state.phase_deadline_mono = Some(Instant::now() + duration);
+        state.phase_started_at_mono = Some(started_at);
+        state.phase_deadline_mono = Some(started_at + duration);
         state.phase_deadline_wall = Some(SystemTime::now() + duration);
 
         (duration.as_secs_f64(), tolerance.as_secs_f64())
@@ -74,16 +76,28 @@ fn notify(event: NotifyEvent, config: &Config, delegate: &RestGapDelegate) {
 
 /// 定时器触发时的阶段转换
 pub fn transition_on_timer(delegate: &RestGapDelegate) {
-    let (next_phase, event, config) = with_state(|state| {
+    let transition = with_state(|state| {
         state.timer.take();
         let config = state.config.clone();
         match state.phase {
-            Phase::Working => (Phase::Breaking, NotifyEvent::BreakStart, config),
-            Phase::Breaking => (Phase::Working, NotifyEvent::BreakEnd, config),
+            Phase::Working => {
+                let should_skip = state
+                    .phase_started_at_mono
+                    .is_some_and(|started_at| crate::idle::should_skip_break(started_at.elapsed()));
+                if should_skip {
+                    (Phase::Working, None, config)
+                } else {
+                    (Phase::Breaking, Some(NotifyEvent::BreakStart), config)
+                }
+            }
+            Phase::Breaking => (Phase::Working, Some(NotifyEvent::BreakEnd), config),
         }
     });
 
-    notify(event, &config, delegate);
+    let (next_phase, event, config) = transition;
+    if let Some(event) = event {
+        notify(event, &config, delegate);
+    }
     schedule_phase(delegate, next_phase);
 }
 

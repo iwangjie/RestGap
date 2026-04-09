@@ -9,6 +9,7 @@ pub const COUNTDOWN_WINDOW_CLASS: &str = "RestGapCountdownWindow";
 // 定时器 ID
 pub const PHASE_TIMER_ID: usize = 1;
 pub const COUNTDOWN_TIMER_ID: usize = 2;
+pub const COUNTDOWN_FEEDBACK_TIMER_ID: usize = 3;
 
 // 托盘图标 ID
 pub const TRAY_ICON_ID: u32 = 1;
