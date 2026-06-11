@@ -406,7 +406,7 @@ const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         <div class="row">
             <div class="row-info">
                 <div class="label" id="t-skip-label">__SKIP_LABEL__</div>
-                <div class="hint">Enable typing challenge to skip</div>
+                <div class="hint">__SKIP_HINT__</div>
             </div>
             <label class="switch">
                 <input type="checkbox" id="allow_skip" __SKIP_CHECKED__>
@@ -517,6 +517,7 @@ pub fn open_settings_dialog(delegate: &RestGapDelegate) {
         .replace("__BREAK_LABEL__", texts.settings_break_label())
         .replace("__BREAK_VAL__", &config.break_seconds.to_string())
         .replace("__SKIP_LABEL__", texts.settings_skip_break_label())
+        .replace("__SKIP_HINT__", texts.settings_skip_break_hint())
         .replace(
             "__SKIP_CHECKED__",
             if config.allow_skip_break {

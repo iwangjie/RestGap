@@ -47,6 +47,10 @@ impl Texts {
         Self { lang }
     }
 
+    pub const fn language(&self) -> Language {
+        self.lang
+    }
+
     pub const fn app_name_short(&self) -> &'static str {
         match self.lang {
             Language::En => "RestGap",
@@ -208,6 +212,14 @@ impl Texts {
     }
 
     #[cfg(target_os = "macos")]
+    pub const fn settings_skip_break_hint(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Show a discreet skip button on the break screen",
+            Language::Zh => "在休息界面右上角显示隐蔽的跳过按钮",
+        }
+    }
+
+    #[cfg(target_os = "macos")]
     pub const fn ok_button(&self) -> &'static str {
         match self.lang {
             Language::En => "OK",
@@ -247,40 +259,6 @@ impl Texts {
     pub const fn countdown_hint(&self) -> &'static str {
         match self.lang {
             Language::En | Language::Zh => "",
-        }
-    }
-
-    pub const fn countdown_skip_title(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Type to skip",
-            Language::Zh => "输入以跳过",
-        }
-    }
-
-    pub fn countdown_skip_progress(&self, matched: usize, total: usize) -> String {
-        match self.lang {
-            Language::En | Language::Zh => format!("{matched} / {total}"),
-        }
-    }
-
-    pub const fn countdown_skip_timeout(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Timeout",
-            Language::Zh => "超时",
-        }
-    }
-
-    pub const fn countdown_skip_mismatch(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Mismatch",
-            Language::Zh => "输入不匹配",
-        }
-    }
-
-    pub const fn countdown_skip_success(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Skipping...",
-            Language::Zh => "正在跳过...",
         }
     }
 }

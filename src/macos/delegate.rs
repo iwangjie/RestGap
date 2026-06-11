@@ -112,20 +112,6 @@ define_class!(
                 return;
             }
 
-            // 隐藏跳过：仅在倒计时窗口激活时处理，且不增加非休息时开销
-            let should_skip = with_state(|state| {
-                if state.countdown_skip_requested {
-                    state.countdown_skip_requested = false;
-                    true
-                } else {
-                    false
-                }
-            });
-            if should_skip {
-                skip_break_phase(self);
-                return;
-            }
-
             if !update_countdown() {
                 // 倒计时结束
                 finish_countdown();

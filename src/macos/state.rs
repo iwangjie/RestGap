@@ -12,7 +12,6 @@ use objc2_foundation::NSTimer;
 use objc2_web_kit::WKWebView;
 
 use super::config::Config;
-use crate::skip_challenge::SkipChallenge;
 
 /// 工作阶段
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -53,10 +52,7 @@ pub struct AppState {
     pub countdown_webviews: Vec<Retained<WKWebView>>,
     pub countdown_timer: Option<Retained<NSTimer>>,
     pub countdown_end_time: Option<Instant>,
-    // 跳过挑战状态（仅在休息时使用）
-    pub countdown_key_monitor: Option<Retained<AnyObject>>,
-    pub countdown_skip_challenge: Option<SkipChallenge>,
-    pub countdown_skip_requested: bool,
+    pub countdown_nav_delegate: Option<Retained<AnyObject>>,
     // Settings window state
     pub settings_window: Option<Retained<NSWindow>>,
     pub settings_webview: Option<Retained<WKWebView>>,
@@ -87,9 +83,7 @@ impl AppState {
             countdown_webviews: Vec::new(),
             countdown_timer: None,
             countdown_end_time: None,
-            countdown_key_monitor: None,
-            countdown_skip_challenge: None,
-            countdown_skip_requested: false,
+            countdown_nav_delegate: None,
             settings_window: None,
             settings_webview: None,
             settings_nav_delegate: None,
