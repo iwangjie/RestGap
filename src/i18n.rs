@@ -316,50 +316,48 @@ impl Texts {
 
     pub fn countdown_title(&self) -> String {
         match self.lang {
-            Language::En => format!("{} · Break countdown", self.app_name_short()),
-            Language::Zh => format!("{} · 休息倒计时", self.app_name_short()),
+            Language::En => "Rest".to_string(),
+            Language::Zh => "休息".to_string(),
         }
     }
 
     pub const fn countdown_hint(&self) -> &'static str {
         match self.lang {
-            Language::En => "Relax your eyes, stretch your body",
-            Language::Zh => "放松眼睛，伸展身体",
+            Language::En | Language::Zh => "",
         }
     }
 
     pub const fn countdown_skip_title(&self) -> &'static str {
         match self.lang {
-            Language::En => "Type this sentence to skip",
-            Language::Zh => "输入这句话才可跳过",
+            Language::En => "Type to skip",
+            Language::Zh => "输入以跳过",
         }
     }
 
     pub fn countdown_skip_progress(&self, matched: usize, total: usize) -> String {
         match self.lang {
-            Language::En => format!("Matched {matched}/{total} · each character must be within 2s"),
-            Language::Zh => format!("已匹配 {matched}/{total} · 相邻字符间隔不能超过 2 秒"),
+            Language::En | Language::Zh => format!("{matched} / {total}"),
         }
     }
 
     pub const fn countdown_skip_timeout(&self) -> &'static str {
         match self.lang {
-            Language::En => "Timed out. Restart from the beginning.",
-            Language::Zh => "输入超时，请从头开始。",
+            Language::En => "Timeout",
+            Language::Zh => "超时",
         }
     }
 
     pub const fn countdown_skip_mismatch(&self) -> &'static str {
         match self.lang {
-            Language::En => "Mismatch. Restart from the beginning.",
-            Language::Zh => "输入不匹配，请从头开始。",
+            Language::En => "Mismatch",
+            Language::Zh => "输入不匹配",
         }
     }
 
     pub const fn countdown_skip_success(&self) -> &'static str {
         match self.lang {
-            Language::En => "Matched. Skipping this break...",
-            Language::Zh => "匹配完成，正在跳过本次休息……",
+            Language::En => "Skipping...",
+            Language::Zh => "正在跳过...",
         }
     }
 }

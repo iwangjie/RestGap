@@ -19,311 +19,194 @@ use super::status_bar::target_anyobject;
 use crate::i18n::Texts;
 use crate::skip_challenge::{Feedback, SkipChallenge, Snapshot};
 
-const KEGEL_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
-<html lang="zh-CN">
+const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aligned Kegel Guide</title>
     <style>
         :root {
-            --page-bg: #f2f0e9;
-            --card-bg: #f2f0e9;
-            --text-main: #333333;
-            --text-sub: #757575;
-            --text-strong: #1f1f1f;
-            --text-muted: #6b6b6b;
-            --font-serif: 'Times New Roman', Times, serif;
-            --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            --anim-duration: 4s;
-        }
-
-        * {
-            box-sizing: border-box;
+            --bg: #000000;
+            --text: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.4);
+            --line: rgba(255, 255, 255, 0.1);
+            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+            --font-mono: "SF Mono", "SFMono-Regular", ui-monospace, monospace;
         }
 
         body {
             margin: 0;
             padding: 0;
             height: 100vh;
-            background-color: var(--page-bg);
+            overflow: hidden;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-sans);
             display: flex;
             justify-content: center;
             align-items: center;
+            -webkit-font-smoothing: antialiased;
             user-select: none;
         }
 
-        .screen {
-            width: 100%;
-            height: 100%;
+        .bg-glow {
+            position: absolute;
+            width: 150vmax;
+            height: 150vmax;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            animation: breathe 12s infinite ease-in-out;
+            pointer-events: none;
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+        }
+
+        .container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: clamp(16px, 3vh, 32px);
-            padding: clamp(24px, 5vh, 64px) 24px;
+            gap: 48px;
+            z-index: 1;
+            width: 100%;
+            max-width: 800px;
         }
 
-        .title {
-            font-family: var(--font-sans);
-            font-size: clamp(18px, 2.4vw, 28px);
-            color: var(--text-strong);
-            text-align: center;
+        .timer-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
         }
 
         .countdown {
-            font-family: var(--font-sans);
-            font-size: clamp(48px, 7vw, 96px);
-            font-weight: 700;
+            font-size: 160px;
+            font-weight: 100;
+            line-height: 0.9;
+            letter-spacing: -0.04em;
             font-variant-numeric: tabular-nums;
-            color: var(--text-strong);
-            line-height: 1;
         }
 
-        .card {
-            background-color: var(--card-bg);
-            width: min(90vw, 600px, calc(70vh * 4 / 3.2));
-            aspect-ratio: 4 / 3.2;
-            border-radius: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            box-shadow: none;
-        }
-
-        .symbol-area {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding-top: 40px;
-        }
-
-        .symbol-text {
-            font-family: var(--font-serif);
-            font-size: clamp(180px, 26vw, 300px);
-            line-height: 1;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-        }
-
-        .star {
-            display: inline-block;
-            margin: 0;
-            font-weight: 400;
-            transform: translateY(25px) scale(1);
-            transform-origin: center calc(50% + 25px);
-            animation: star-breathe var(--anim-duration) cubic-bezier(0.45, 0, 0.55, 1) infinite;
-        }
-
-        .text-area {
-            height: 120px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            padding-bottom: 30px;
-        }
-
-        .status-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            font-family: var(--font-sans);
-            font-size: 0.8rem;
-            letter-spacing: 0.2em;
+        .title {
+            font-size: 14px;
             font-weight: 500;
-            color: var(--text-sub);
-            position: absolute;
-            transition: opacity 0.5s;
-        }
-
-        .slash {
-            margin: 4px 0;
-            opacity: 0.5;
-            font-weight: 300;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--text-dim);
         }
 
         .hint {
-            font-family: var(--font-sans);
-            font-size: clamp(14px, 2vw, 22px);
-            color: var(--text-muted);
+            font-size: 16px;
+            color: var(--text-dim);
+            max-width: 480px;
+            line-height: 1.6;
             text-align: center;
-            max-width: 80vw;
         }
 
         .skip-card {
-            width: min(80vw, 880px);
-            padding: 18px 22px 20px;
-            border: 1px solid rgba(31, 31, 31, 0.12);
-            background: rgba(255, 255, 255, 0.48);
+            width: 440px;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            gap: 16px;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
         }
 
         .skip-card.failure {
-            border-color: rgba(199, 73, 52, 0.55);
-            box-shadow: 0 16px 36px rgba(199, 73, 52, 0.12);
-            animation: skip-shake 0.42s ease;
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+            border-color: rgba(255, 69, 58, 0.3);
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
         }
 
         .skip-title {
-            font-family: var(--font-sans);
-            font-size: clamp(14px, 1.8vw, 18px);
-            letter-spacing: 0.08em;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            color: var(--text-sub);
+            color: var(--text-dim);
         }
 
         .skip-phrase {
-            font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
-            font-size: clamp(18px, 2vw, 28px);
-            line-height: 1.6;
-            color: var(--text-main);
-            white-space: pre-wrap;
-            word-break: break-word;
+            font-family: var(--font-mono);
+            font-size: 16px;
+            line-height: 1.5;
+            color: var(--text);
+            word-break: break-all;
         }
 
         .skip-char {
-            display: inline-block;
-            transition: transform 0.2s ease, color 0.2s ease, background-color 0.2s ease;
-            padding: 0 1px;
-            border-radius: 4px;
+            display: inline;
+            border-radius: 3px;
         }
 
         .skip-char.matched {
-            color: #244c39;
-            transform: translateY(-2px);
+            color: var(--text);
+            opacity: 1;
         }
 
         .skip-char.current {
-            background: rgba(36, 76, 57, 0.12);
-            color: #16241b;
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text);
         }
 
         .skip-char.pending {
-            color: #7c7c7c;
+            color: var(--text-dim);
         }
 
         .skip-status {
-            font-family: var(--font-sans);
-            font-size: clamp(14px, 1.8vw, 18px);
-            color: var(--text-muted);
-        }
-
-        @keyframes star-breathe {
-            0%, 100% {
-                transform: translateY(25px) scale(1.35);
-                opacity: 0.8;
-            }
-            40%, 70% {
-                transform: translateY(25px) scale(0.82);
-                opacity: 1;
-                color: #111;
-            }
-        }
-
-        .status-group.relax { animation: fade-relax var(--anim-duration) infinite; }
-        .status-group.tight { animation: fade-tight var(--anim-duration) infinite; }
-
-        @keyframes fade-relax {
-            0%, 20%, 90%, 100% { opacity: 1; filter: blur(0); }
-            30%, 80% { opacity: 0; filter: blur(4px); }
-        }
-
-        @keyframes fade-tight {
-            0%, 25%, 85%, 100% { opacity: 0; filter: blur(4px); }
-            35%, 75% { opacity: 1; filter: blur(0); }
-        }
-
-        @keyframes skip-shake {
-            0%, 100% { transform: translateX(0); }
-            20% { transform: translateX(-10px); }
-            40% { transform: translateX(8px); }
-            60% { transform: translateX(-6px); }
-            80% { transform: translateX(4px); }
+            font-size: 12px;
+            color: var(--text-dim);
         }
     </style>
 </head>
 <body>
-<div class="screen">
-    <div class="title" id="title">__TITLE__</div>
-    <div class="countdown" id="countdown">__COUNTDOWN__</div>
-    <div class="card">
-        <div class="symbol-area">
-            <div class="symbol-text">
-                <span class="star">*</span>
-            </div>
+    <div class="bg-glow"></div>
+    <div class="container">
+        <div class="timer-group">
+            <div class="countdown" id="countdown">__COUNTDOWN__</div>
+            <div class="title" id="title">__TITLE__</div>
         </div>
-
-        <div class="text-area">
-            <div class="status-group relax">
-                <span>RELAX</span>
-                <span class="slash">/</span>
-                <span>INHALE</span>
-            </div>
-
-            <div class="status-group tight">
-                <span>TIGHTEN</span>
-                <span class="slash">/</span>
-                <span>HOLD</span>
-            </div>
-        </div>
+        <div class="hint" id="hint">__HINT__</div>
+        __SKIP_CARD__
     </div>
-    <div class="hint" id="hint">__HINT__</div>
-    __SKIP_CARD__
-</div>
 <script>
     const skipEnabled = __SKIP_ENABLED__;
     let lastFailureSeq = 0;
-    window.addEventListener('contextmenu', (event) => {
-        event.preventDefault();
-    });
-    window.setCountdown = (value) => {
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.setCountdown = (v) => {
         const el = document.getElementById('countdown');
-        if (el) {
-            el.textContent = value;
-        }
+        if (el) el.textContent = v;
     };
-    window.setTitle = (value) => {
+    window.setTitle = (v) => {
         const el = document.getElementById('title');
-        if (el) {
-            el.textContent = value;
-        }
+        if (el) el.textContent = v;
     };
-    window.setHint = (value) => {
+    window.setHint = (v) => {
         const el = document.getElementById('hint');
-        if (el) {
-            el.textContent = value;
-        }
+        if (el) el.textContent = v;
     };
     window.setSkipChallenge = (payload) => {
-        if (!skipEnabled) {
-            return;
-        }
+        if (!skipEnabled) return;
         const phraseEl = document.getElementById('skip-phrase');
         const statusEl = document.getElementById('skip-status');
-        const panelEl = document.getElementById('skip-card');
-        if (!phraseEl || !statusEl || !panelEl) {
-            return;
-        }
-        if (phraseEl) {
-            phraseEl.innerHTML = payload.phraseHtml;
-        }
-        if (statusEl) {
-            statusEl.textContent = payload.status;
-        }
-        if (panelEl && payload.failureSeq !== lastFailureSeq) {
-            panelEl.classList.remove('failure');
-            void panelEl.offsetWidth;
-            panelEl.classList.add('failure');
+        const cardEl = document.getElementById('skip-card');
+        if (phraseEl) phraseEl.innerHTML = payload.phraseHtml;
+        if (statusEl) statusEl.textContent = payload.status;
+        if (cardEl && payload.failureSeq !== lastFailureSeq) {
+            cardEl.classList.remove('failure');
+            void cardEl.offsetWidth;
+            cardEl.classList.add('failure');
             lastFailureSeq = payload.failureSeq;
         }
     };
@@ -385,13 +268,14 @@ fn skip_status_text(texts: &Texts, snapshot: &Snapshot) -> String {
     }
 }
 
-fn build_kegel_html(
+fn build_countdown_html(
     title: &str,
     countdown: &str,
     hint: &str,
     skip_section: Option<(&str, String, String)>,
 ) -> String {
-    let mut html = KEGEL_HTML_TEMPLATE.replace("__TITLE__", &escape_html(title));
+    let mut html = COUNTDOWN_HTML_TEMPLATE.replace("__TITLE__", &escape_html(title));
+    html = html.replace("__TITLE__", &escape_html(title));
     html = html.replace("__COUNTDOWN__", &escape_html(countdown));
     html = html.replace("__HINT__", &escape_html(hint));
     if let Some((skip_title, skip_phrase_html, skip_status)) = skip_section {
@@ -407,7 +291,7 @@ fn build_kegel_html(
     }
 }
 
-fn update_kegel_countdown(webview: &WKWebView, text: &str) {
+fn update_countdown_text(webview: &WKWebView, text: &str) {
     let js_value = serde_json::to_string(text).unwrap_or_else(|_| "\"\"".to_string());
     let script = format!("window.setCountdown({js_value});");
     let script = NSString::from_str(&script);
@@ -416,7 +300,7 @@ fn update_kegel_countdown(webview: &WKWebView, text: &str) {
     }
 }
 
-fn update_kegel_skip_challenge(webview: &WKWebView, texts: &Texts, snapshot: &Snapshot) {
+fn update_skip_challenge(webview: &WKWebView, texts: &Texts, snapshot: &Snapshot) {
     let payload = serde_json::json!({
         "phraseHtml": render_skip_phrase_html(snapshot),
         "status": skip_status_text(texts, snapshot),
@@ -494,7 +378,7 @@ fn on_countdown_keydown(event: &NSEvent) {
 
     if let Some((webviews, snapshot)) = render {
         for webview in &webviews {
-            update_kegel_skip_challenge(webview, &texts, &snapshot);
+            update_skip_challenge(webview, &texts, &snapshot);
         }
     }
 }
@@ -512,10 +396,8 @@ global_block! {
 pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_start_sound: bool) {
     let mtm = delegate.mtm();
     let (texts, allow_skip_break) = with_state(|state| {
-        (
-            Texts::new(state.config.effective_language()),
-            state.config.allow_skip_break,
-        )
+        let language = state.config.effective_language();
+        (Texts::new(language), state.config.allow_skip_break)
     });
     let skip_challenge = allow_skip_break.then(SkipChallenge::random);
     let skip_snapshot = skip_challenge.as_ref().map(SkipChallenge::snapshot);
@@ -528,12 +410,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
         play_sound("Glass");
     }
 
-    let background = NSColor::colorWithSRGBRed_green_blue_alpha(
-        242.0 / 255.0,
-        240.0 / 255.0,
-        233.0 / 255.0,
-        1.0,
-    );
+    let background = NSColor::colorWithSRGBRed_green_blue_alpha(0.0, 0.0, 0.0, 1.0);
     // 收集所有屏幕的 frame（多屏幕时逐屏覆盖）
     let screens = NSScreen::screens(mtm);
     let screen_count = screens.count();
@@ -554,7 +431,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
 
     let mut windows = Vec::with_capacity(frames.len());
     let mut webviews = Vec::with_capacity(frames.len());
-    let html = build_kegel_html(
+    let html = build_countdown_html(
         &texts.countdown_title(),
         &format_countdown(seconds),
         texts.countdown_hint(),
@@ -681,7 +558,7 @@ pub fn update_countdown() -> bool {
         let secs = remaining.as_secs();
         let text = format_countdown(secs);
         for webview in &state.countdown_webviews {
-            update_kegel_countdown(webview, &text);
+            update_countdown_text(webview, &text);
         }
         true
     })
