@@ -152,6 +152,15 @@ define_class!(
         fn language_chinese(&self, _sender: Option<&AnyObject>) {
             set_language_preference(LanguagePreference::Zh);
         }
+
+        #[unsafe(method(settingsChanged))]
+        fn settings_changed(&self) {
+            let (phase, config) = with_state(|state| (state.phase, state.config.clone()));
+            schedule_phase(self, phase);
+            if phase == Phase::Breaking {
+                super::ui::show_countdown_window(self, config.break_seconds, false);
+            }
+        }
     }
 );
 

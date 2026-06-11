@@ -1,0 +1,31 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#2C2C2E;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
+        </linearGradient>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="30" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+        <linearGradient id="glyph-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#A0A0A0;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <!-- Background Squircle (Apple Standard) -->
+    <path d="M 512 0 C 128 0 0 128 0 512 C 0 896 128 1024 512 1024 C 896 1024 1024 896 1024 512 C 1024 128 896 0 512 0 Z" fill="url(#bg-grad)" />
+    
+    <!-- Gap Glyph -->
+    <g transform="translate(512, 512)">
+        <!-- Outer Ring with precision gap -->
+        <path d="M 0 -240 A 240 240 0 1 1 -80 -226" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="80" stroke-linecap="round" />
+        
+        <!-- Glowing segment representing the 'Active Rest' -->
+        <path d="M -80 -226 A 240 240 0 0 1 80 -226" fill="none" stroke="url(#glyph-grad)" stroke-width="80" stroke-linecap="round" filter="url(#glow)" />
+        
+        <!-- Minimalist Pause Symbol with glass effect -->
+        <rect x="-70" y="-90" width="50" height="180" rx="25" fill="white" opacity="0.9" />
+        <rect x="20" y="-90" width="50" height="180" rx="25" fill="white" opacity="0.9" />
+    </g>
+</svg>

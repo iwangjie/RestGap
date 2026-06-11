@@ -57,6 +57,10 @@ pub struct AppState {
     pub countdown_key_monitor: Option<Retained<AnyObject>>,
     pub countdown_skip_challenge: Option<SkipChallenge>,
     pub countdown_skip_requested: bool,
+    // Settings window state
+    pub settings_window: Option<Retained<NSWindow>>,
+    pub settings_webview: Option<Retained<WKWebView>>,
+    pub settings_nav_delegate: Option<Retained<AnyObject>>,
 }
 
 impl AppState {
@@ -86,6 +90,9 @@ impl AppState {
             countdown_key_monitor: None,
             countdown_skip_challenge: None,
             countdown_skip_requested: false,
+            settings_window: None,
+            settings_webview: None,
+            settings_nav_delegate: None,
         }
     }
 }

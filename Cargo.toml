@@ -69,7 +69,10 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = [
 objc2-core-foundation = "0.3.2"
 objc2-web-kit = { version = "0.3.2", default-features = false, features = [
     "WKNavigation",
+    "WKNavigationAction",
+    "WKNavigationDelegate",
     "WKWebView",
+    "WKWebViewConfiguration",
     "block2",
     "objc2-app-kit",
 ] }

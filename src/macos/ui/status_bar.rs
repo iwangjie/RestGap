@@ -29,14 +29,14 @@ pub fn refresh_status_title() {
                 let hm = state
                     .phase_deadline_wall
                     .map_or_else(|| "--:--".to_string(), format_hhmm);
-                format!("⏰ {hm}")
+                format!("● {hm}")
             }
             Phase::Breaking => {
                 let remaining = state
                     .phase_deadline_mono
                     .and_then(|t| t.checked_duration_since(Instant::now()))
                     .unwrap_or(Duration::from_secs(0));
-                format!("☕ {}", approx_duration(remaining))
+                format!("○ {}", approx_duration(remaining))
             }
         };
         let ns_title = NSString::from_str(&title);

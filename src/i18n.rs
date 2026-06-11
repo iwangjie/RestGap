@@ -160,32 +160,10 @@ impl Texts {
         }
     }
 
-    pub const fn invalid_settings_title(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Invalid settings",
-            Language::Zh => "配置无效",
-        }
-    }
-
-    pub const fn invalid_settings_message(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Please enter valid numbers: break every N minutes for N seconds.",
-            Language::Zh => "请输入有效的数字：每 N 分钟休息 N 秒。",
-        }
-    }
-
     pub const fn settings_title(&self) -> &'static str {
         match self.lang {
             Language::En => "Settings",
             Language::Zh => "配置",
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    pub const fn settings_informative_text(&self) -> &'static str {
-        match self.lang {
-            Language::En => "After saving, the timer will restart from now.",
-            Language::Zh => "保存后将从现在开始重新计时。",
         }
     }
 
@@ -202,14 +180,6 @@ impl Texts {
         match self.lang {
             Language::En => "Cancel",
             Language::Zh => "取消",
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    pub const fn settings_language_button(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Language…",
-            Language::Zh => "语言…",
         }
     }
 
@@ -234,53 +204,6 @@ impl Texts {
         match self.lang {
             Language::En => "Allow skipping a break:",
             Language::Zh => "允许跳过休息：",
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    pub const fn settings_skip_break_enabled(&self) -> &'static str {
-        match self.lang {
-            Language::En => "On",
-            Language::Zh => "开启",
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    pub const fn settings_skip_break_disabled(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Off",
-            Language::Zh => "关闭",
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    pub const fn settings_skip_break_button(&self, enabled: bool) -> &'static str {
-        if enabled {
-            match self.lang {
-                Language::En => "Skip: On",
-                Language::Zh => "跳过：开",
-            }
-        } else {
-            match self.lang {
-                Language::En => "Skip: Off",
-                Language::Zh => "跳过：关",
-            }
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    pub const fn choose_language_message(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Choose your preferred language.",
-            Language::Zh => "选择界面语言。",
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    pub const fn choose_language_note(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Auto follows your system language.",
-            Language::Zh => "“自动”将跟随系统语言。",
         }
     }
 
