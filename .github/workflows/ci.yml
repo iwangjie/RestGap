@@ -84,6 +84,9 @@ jobs:
         with:
           targets: x86_64-apple-darwin, aarch64-apple-darwin
 
+      - name: Install pinned Rust targets
+        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -144,6 +147,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-apple-darwin, aarch64-apple-darwin
+
+      - name: Install pinned Rust targets
+        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
 
       - name: Cache cargo registry
         uses: actions/cache@v4
