@@ -21,18 +21,21 @@ use super::super::utils::{format_countdown, play_sound};
 use super::status_bar::target_anyobject;
 use crate::i18n::Texts;
 
-const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
+const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <style>
         :root {
-            --bg: #000000;
+            --bg: #0b0b0f;
             --text: #ffffff;
             --text-dim: rgba(255, 255, 255, 0.4);
             --line: rgba(255, 255, 255, 0.1);
-            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
             --font-mono: "SF Mono", "SFMono-Regular", ui-monospace, monospace;
+            /* Dynamic variables set by JS */
+            --accent: #00d2ff;
+            --accent-rgb: 0, 210, 255;
         }
 
         body {
@@ -54,21 +57,22 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
             position: absolute;
             width: 150vmax;
             height: 150vmax;
-            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
-            animation: breathe 12s infinite ease-in-out;
+            background: radial-gradient(circle at center, rgba(var(--accent-rgb), 0.08) 0%, transparent 60%);
+            animation: breathe 10s infinite ease-in-out;
             pointer-events: none;
+            z-index: 0;
         }
 
         @keyframes breathe {
-            0%, 100% { transform: scale(1); opacity: 0.3; }
-            50% { transform: scale(1.1); opacity: 0.7; }
+            0%, 100% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(1.15); opacity: 0.8; }
         }
 
         .container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 48px;
+            gap: 40px;
             z-index: 1;
             width: 100%;
             max-width: 800px;
@@ -78,23 +82,28 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
         }
 
         .countdown {
-            font-size: 160px;
+            font-size: 140px;
             font-weight: 100;
             line-height: 0.9;
             letter-spacing: -0.04em;
             font-variant-numeric: tabular-nums;
+            background: linear-gradient(180deg, #ffffff 40%, rgba(255, 255, 255, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .title {
-            font-size: 14px;
-            font-weight: 500;
-            letter-spacing: 0.3em;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.4em;
             text-transform: uppercase;
-            color: var(--text-dim);
+            color: var(--accent);
+            text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.4);
+            transition: all 0.5s ease;
         }
 
         .hint {
@@ -108,96 +117,195 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
 
         /* 极简工位训练卡片 */
         .exercise-card {
-            width: 460px;
-            padding: 24px 28px;
+            width: 720px;
             background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(var(--accent-rgb), 0.15);
+            border-radius: 32px;
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            display: flex;
+            gap: 40px;
+            padding: 40px;
+            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+                        0 0 40px rgba(var(--accent-rgb), 0.02);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            box-sizing: border-box;
+        }
+
+        .exercise-left {
+            width: 220px;
+            height: 220px;
+            background: rgba(var(--accent-rgb), 0.03);
+            border: 1px solid rgba(var(--accent-rgb), 0.08);
             border-radius: 24px;
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        }
-        .exercise-header {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .exercise-icon {
-            width: 52px;
-            height: 52px;
-            background: rgba(255, 255, 255, 0.04);
-            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(var(--accent-rgb), 0.05);
         }
-        .exercise-meta {
+
+        .exercise-left::before {
+            content: '';
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            background: radial-gradient(circle, rgba(var(--accent-rgb), 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .exercise-illustration {
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .exercise-right {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex-grow: 1;
+            text-align: left;
+        }
+
+        .exercise-header {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .exercise-badge {
+            align-self: flex-start;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent);
+            background: rgba(var(--accent-rgb), 0.12);
+            padding: 5px 12px;
+            border-radius: 100px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            border: 1px solid rgba(var(--accent-rgb), 0.2);
+            box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.1);
+        }
+
+        .exercise-title {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .exercise-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            margin: 24px 0;
+        }
+
+        .exercise-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(var(--accent-rgb), 0.08);
+            border: 1px solid rgba(var(--accent-rgb), 0.25);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 2px;
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.1);
+        }
+
+        .step-content {
             display: flex;
             flex-direction: column;
             gap: 4px;
-            text-align: left;
         }
-        .exercise-label {
-            font-size: 10px;
-            font-weight: 700;
-            color: #0A84FF;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-        }
-        .exercise-title {
-            margin: 0;
+
+        .step-title {
             font-size: 18px;
             font-weight: 600;
             color: #ffffff;
             letter-spacing: -0.01em;
         }
-        .exercise-steps {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            text-align: left;
-        }
-        .exercise-step {
-            font-size: 13px;
+
+        .step-desc {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
             line-height: 1.5;
-            color: rgba(255, 255, 255, 0.85);
-        }
-        .exercise-step strong {
-            color: #ffffff;
-        }
-        .exercise-divider {
-            height: 1px;
-            background: rgba(255, 255, 255, 0.06);
-            margin: 2px 0;
+            font-weight: 400;
         }
 
+        .exercise-footer {
+            display: flex;
+            align-items: center;
+            margin-top: 4px;
+        }
+
+        .exercise-reps-badge {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 8px 18px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .exercise-reps-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent);
+        }
 
         /* 隐藏的跳过按钮 */
         .skip-btn {
             position: absolute;
-            top: 24px;
-            right: 24px;
-            padding: 8px 16px;
-            font-size: 13px;
+            top: 32px;
+            right: 32px;
+            padding: 10px 20px;
+            font-size: 14px;
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.25);
             cursor: pointer;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            background: transparent;
-            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.01);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             user-select: none;
             z-index: 100;
             display: none;
         }
         .skip-btn:hover {
-            color: rgba(255, 255, 255, 0.6);
-            border-color: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.15);
             background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            transform: translateY(-1px);
         }
 
         /* 跳过确认弹窗 */
@@ -207,15 +315,15 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
             display: flex;
             justify-content: center;
             align-items: center;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             z-index: 200;
         }
         .skip-modal.show {
@@ -223,68 +331,72 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
             pointer-events: auto;
         }
         .skip-modal-content {
-            width: 380px;
-            padding: 32px;
-            background: rgba(20, 20, 20, 0.8);
+            width: 400px;
+            padding: 40px;
+            background: rgba(20, 20, 22, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 20px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            border-radius: 28px;
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 24px;
             text-align: center;
-            transform: scale(0.95);
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: scale(0.92);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .skip-modal.show .skip-modal-content {
             transform: scale(1);
         }
         .skip-modal-title {
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
             letter-spacing: -0.01em;
         }
         .skip-modal-prompt {
-            font-size: 13px;
-            color: var(--text-dim);
-            line-height: 1.5;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            line-height: 1.6;
         }
         .skip-modal-prompt strong {
             color: #ff453a;
-            background: rgba(255, 69, 58, 0.15);
-            padding: 2px 8px;
-            border-radius: 4px;
+            background: rgba(255, 69, 58, 0.12);
+            border: 1px solid rgba(255, 69, 58, 0.2);
+            padding: 4px 10px;
+            border-radius: 8px;
             font-family: var(--font-mono);
-            font-weight: bold;
-            margin: 0 2px;
+            font-weight: 600;
+            margin: 6px 0;
             display: inline-block;
+            box-shadow: 0 2px 8px rgba(255, 69, 58, 0.08);
         }
         .skip-input {
             width: 100%;
             box-sizing: border-box;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
+            border-radius: 12px;
             color: #fff;
-            padding: 10px 14px;
-            font-size: 15px;
+            padding: 12px 16px;
+            font-size: 16px;
             outline: none;
             text-align: center;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .skip-input:focus {
-            border-color: rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 69, 58, 0.4);
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 0 16px rgba(255, 69, 58, 0.1);
         }
         .skip-modal-actions {
             display: flex;
-            gap: 12px;
+            gap: 14px;
         }
         .modal-btn {
             flex: 1;
-            padding: 10px 16px;
-            border-radius: 10px;
-            font-size: 14px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             border: none;
@@ -293,9 +405,11 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
         .btn-cancel {
             background: rgba(255, 255, 255, 0.08);
             color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
         .btn-cancel:hover {
             background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-1px);
         }
         .btn-confirm {
             background: #ff453a;
@@ -306,14 +420,46 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
         .btn-confirm.active {
             opacity: 1;
             pointer-events: auto;
-            box-shadow: 0 4px 12px rgba(255, 69, 58, 0.3);
+            box-shadow: 0 8px 20px rgba(255, 69, 58, 0.4);
         }
         .btn-confirm.active:hover {
             background: #ff3b30;
+            transform: translateY(-1px);
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .exercise-card {
+                width: 90%;
+                max-width: 500px;
+                flex-direction: column;
+                gap: 24px;
+                padding: 24px;
+            }
+            .exercise-left {
+                width: 100%;
+                height: 180px;
+            }
+            .countdown {
+                font-size: 100px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- 全局 SVG 滤镜定义 -->
+    <svg style="position: absolute; width: 0; height: 0;">
+        <defs>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2" result="blur" />
+                <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                </feMerge>
+            </filter>
+        </defs>
+    </svg>
+
     <div class="bg-glow"></div>
     <div class="skip-btn" id="skip-btn" onclick="openSkipModal()">Skip</div>
 
@@ -326,14 +472,19 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
 
         <!-- 极简工位拉伸卡片 -->
         <div class="exercise-card" id="exercise-card">
-            <div class="exercise-header">
-                <div class="exercise-icon" id="exercise-icon"></div>
-                <div class="exercise-meta">
-                    <span class="exercise-label" id="exercise-label">STRETCH & MOBILITY</span>
+            <div class="exercise-left">
+                <div class="exercise-illustration" id="exercise-illustration"></div>
+            </div>
+            <div class="exercise-right">
+                <div class="exercise-header">
+                    <span class="exercise-badge" id="exercise-label">STRETCH & MOBILITY</span>
                     <h3 class="exercise-title" id="exercise-title">---</h3>
                 </div>
+                <div class="exercise-steps" id="exercise-steps"></div>
+                <div class="exercise-footer">
+                    <div class="exercise-reps-badge" id="exercise-reps">---</div>
+                </div>
             </div>
-            <div class="exercise-steps" id="exercise-steps"></div>
         </div>
     </div>
 
@@ -383,88 +534,133 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
             id: "desk-plus",
             label: currentLang === 'zh' ? "前锯肌激活 · 拯救背痛" : "SERRATUS ANTERIOR · BACK PAIN RELIEF",
             title: currentLang === 'zh' ? "办公桌“推击加壳” (Desk Plus)" : "Desk Plus (Desk Press & Push)",
+            reps: currentLang === 'zh' ? "建议重复 10 次" : "10 Reps Recommended",
             steps: currentLang === 'zh' ? [
-                "身体前倾，将双手掌或整个小臂平放在办公桌上。保持<strong>手肘绝对伸直不弯曲</strong>。",
-                "<strong>呼气：</strong>双手用力向下、向远按压办公桌，利用反作用力让整个<strong>上背部向后鼓起</strong>（像猫咪弓背）。",
-                "<strong>吸气：</strong>保持手臂伸直，放松并让胸口向下沉，去感受背部夹紧。",
-                "每次连续做 <strong>10</strong> 次。"
+                { title: "双手平放", desc: "身体前倾，双手掌平放在办公桌上，手肘绝对伸直" },
+                { title: "向下推撑", desc: "双手用力按压桌子，借助反作用力让上背部向后拱起" },
+                { title: "放松还原", desc: "保持双臂伸直，放松并让胸口下沉，感受背部夹紧" }
             ] : [
-                "Lean forward, place hands or forearms flat on the desk. Keep <strong>elbows locked straight</strong>.",
-                "<strong>Exhale:</strong> Press down & forward firmly. Use reaction force to <strong>arch your upper back backward</strong> (like a cat stretch).",
-                "<strong>Inhale:</strong> Keep arms straight, relax, and let your chest sink down to feel your back squeeze.",
-                "Perform <strong>10</strong> times consecutively."
+                { title: "Place Hands", desc: "Lean forward, place hands flat on desk, lock elbows straight" },
+                { title: "Press Down", desc: "Press desk down firmly, arching your upper back backward" },
+                { title: "Relax & Sink", desc: "Keep arms straight, let chest sink down to squeeze back" }
             ],
-            iconSvg: `<svg width="36" height="36" viewBox="0 0 64 64" fill="none">
-                <line x1="8" y1="48" x2="56" y2="48" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round"/>
-                <line x1="32" y1="48" x2="32" y2="36" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
-                <path d="M 32 36 Q 22 26 32 16" stroke="#0A84FF" stroke-width="3" stroke-linecap="round" fill="none">
-                    <animate attributeName="d" 
-                             values="M 32 36 Q 22 26 32 16; M 32 36 Q 14 26 32 16; M 32 36 Q 22 26 32 16" 
-                             dur="4s" repeatCount="indefinite" />
+            iconSvg: `<svg width="120" height="120" viewBox="0 0 80 80" fill="none">
+                <!-- Desk -->
+                <line x1="10" y1="60" x2="50" y2="60" stroke="rgba(255,255,255,0.2)" stroke-width="3" stroke-linecap="round"/>
+                <!-- Arms (straight) -->
+                <line x1="30" y1="60" x2="45" y2="35" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round"/>
+                <!-- Spine (Arching/sinking) -->
+                <path d="M 60 55 Q 56 42 45 35" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" fill="none" filter="url(#glow)">
+                    <animate attributeName="d"
+                             values="M 60 55 Q 56 42 45 35; M 60 55 Q 65 42 45 35; M 60 55 Q 50 42 45 35; M 60 55 Q 56 42 45 35"
+                             dur="5s" repeatCount="indefinite" />
                 </path>
+                <!-- Head -->
+                <circle cx="40" cy="23" r="6" stroke="rgba(255,255,255,0.6)" stroke-width="3">
+                    <animate attributeName="cx"
+                             values="40; 38; 42; 40"
+                             dur="5s" repeatCount="indefinite" />
+                    <animate attributeName="cy"
+                             values="23; 25; 22; 23"
+                             dur="5s" repeatCount="indefinite" />
+                </circle>
             </svg>`
         },
         {
             id: "seated-punch-plus",
             label: currentLang === 'zh' ? "稳定肌群激活 · 弹响改善" : "SHOULDER STABILIZERS · ALIGNMENT",
             title: currentLang === 'zh' ? "空气“V字盲推” (Seated Punch Plus)" : "Air V-Push (Seated Punch Plus)",
+            reps: currentLang === 'zh' ? "建议重复 8-10 次" : "8-10 Reps Recommended",
             steps: currentLang === 'zh' ? [
-                "背部离开靠背挺直，双手在不产生弹响的<strong>斜前方30°-45°（V字形）</strong>举起，大拇指尖朝上。",
-                "保持手臂伸直，用肩膀的力量将双手<strong>拼命向前伸</strong>（够大屏幕），悬停 1 秒。",
-                "<strong>原路收回</strong>肩膀，但手不要放下来。",
-                "每次做 <strong>8-10</strong> 次，在安全的无响声区间内重新建立肌肉记忆。"
+                { title: "V字举手", desc: "背部离开椅背挺直，双手斜前方30°-45°举起，大拇指朝上" },
+                { title: "前推肩膀", desc: "保持手臂伸直，用肩膀力量将双手拼命向前伸，悬停1秒" },
+                { title: "收回还原", desc: "原路收缩肩膀，手不要放下来，保持手臂抬起" }
             ] : [
-                "Sit tall away from the backrest. Raise arms at a <strong>30°-45° diagonal angle (V-shape)</strong>, thumbs pointing up.",
-                "Keep arms straight. Use shoulder blades to <strong>push hands forward</strong> (reach for screen), hold for 1s.",
-                "<strong>Retract shoulders</strong> back to starting position (keep arms raised).",
-                "Perform <strong>8-10</strong> times. Rebuilds shoulder motor patterns safely without clicking."
+                { title: "Raise V-Arms", desc: "Sit tall, raise arms at a 30°-45° diagonal angle, thumbs up" },
+                { title: "Push Forward", desc: "Keep arms straight, push shoulders forward as far as possible, hold 1s" },
+                { title: "Retract Back", desc: "Pull shoulders back to start position, keeping arms raised" }
             ],
-            iconSvg: `<svg width="36" height="36" viewBox="0 0 64 64" fill="none">
-                <line x1="20" y1="44" x2="44" y2="44" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round" />
-                <line x1="24" y1="44" x2="14" y2="24" stroke="#0A84FF" stroke-width="3" stroke-linecap="round">
-                    <animate attributeName="x2" values="14; 10; 14" dur="3s" repeatCount="indefinite" />
-                    <animate attributeName="y2" values="24; 16; 24" dur="3s" repeatCount="indefinite" />
+            iconSvg: `<svg width="120" height="120" viewBox="0 0 80 80" fill="none">
+                <!-- Chair backrest outline (aesthetic context) -->
+                <path d="M 65 70 L 65 35" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round" />
+                <!-- Hips/Seat -->
+                <line x1="45" y1="60" x2="65" y2="60" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round" />
+                <!-- Spine (sitting tall) -->
+                <line x1="55" y1="60" x2="55" y2="35" stroke="rgba(255,255,255,0.3)" stroke-width="3" stroke-linecap="round">
+                    <animate attributeName="x2" values="55; 51; 57; 55" dur="4s" repeatCount="indefinite" />
                 </line>
-                <line x1="40" y1="44" x2="50" y2="24" stroke="#0A84FF" stroke-width="3" stroke-linecap="round">
-                    <animate attributeName="x2" values="50; 54; 50" dur="3s" repeatCount="indefinite" />
-                    <animate attributeName="y2" values="24; 16; 24" dur="3s" repeatCount="indefinite" />
+                <!-- Arm extending (V-push forward/back) -->
+                <line x1="55" y1="35" x2="25" y2="25" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" filter="url(#glow)">
+                    <animate attributeName="x1" values="55; 51; 57; 55" dur="4s" repeatCount="indefinite" />
+                    <animate attributeName="x2" values="25; 18; 29; 25" dur="4s" repeatCount="indefinite" />
                 </line>
-                <circle cx="14" cy="24" r="3" fill="#ffffff">
-                    <animate attributeName="cx" values="14; 10; 14" dur="3s" repeatCount="indefinite" />
-                    <animate attributeName="cy" values="24; 16; 24" dur="3s" repeatCount="indefinite" />
+                <!-- Head -->
+                <circle cx="55" cy="21" r="6" stroke="rgba(255,255,255,0.6)" stroke-width="3">
+                    <animate attributeName="cx" values="55; 52; 56; 55" dur="4s" repeatCount="indefinite" />
                 </circle>
-                <circle cx="50" cy="24" r="3" fill="#ffffff">
-                    <animate attributeName="cx" values="50; 54; 50" dur="3s" repeatCount="indefinite" />
-                    <animate attributeName="cy" values="24; 16; 24" dur="3s" repeatCount="indefinite" />
-                </circle>
+                <!-- Arrow showing motion direction -->
+                <g>
+                    <path d="M 25 15 L 17 15 M 17 15 L 21 11 M 17 15 L 21 19" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" />
+                    <animateTransform attributeName="transform" type="translate" values="0,0; -6,0; 2,0; 0,0" dur="4s" repeatCount="indefinite" />
+                </g>
             </svg>`
         },
         {
             id: "chair-depressions",
             label: currentLang === 'zh' ? "下斜方肌增肌 · 消除耸肩" : "LOWER TRAPS · DEFUSE TECH NECK",
             title: currentLang === 'zh' ? "办公椅“反向撑体” (Chair Depressions)" : "Chair Depressions",
+            reps: currentLang === 'zh' ? "每次 3 秒 · 建议重复 8 次" : "3s Hold · 8 Reps Recommended",
             steps: currentLang === 'zh' ? [
-                "双手撑在椅子的扶手（或屁股两侧椅面边缘），手臂伸直，挺胸。",
-                "<strong>呼气：</strong>双手发力将扶手狠狠往下压，借助反作用力将原本高耸的<strong>肩膀用力沉下去，让脖子无限拔长</strong>。",
-                "能力强的人可以让屁股<strong>微微悬空 1 厘米</strong>。",
-                "每组保持 <strong>3</strong> 秒，重复 <strong>8</strong> 次。"
+                { title: "双手撑扶", desc: "双手撑在扶手或屁股两侧椅面边缘，挺胸且手臂伸直" },
+                { title: "用力下沉", desc: "用力将扶手往下压，借助反作用力将肩膀沉下，脖子拉长" },
+                { title: "屁股悬空", desc: "可选：能力强者可将屁股微微悬空1厘米，保持3秒" }
             ] : [
-                "Place hands on armrests or seat edges. Arms straight, chest up.",
-                "<strong>Exhale:</strong> Press down firmly. Use reaction force to <strong>draw shoulders down, lengthening your neck</strong>.",
-                "If strong enough, let your hips <strong>hover 1 cm</strong> off the seat.",
-                "Hold for <strong>3</strong> seconds, repeat <strong>8</strong> times."
+                { title: "Grip Armrests", desc: "Place hands on armrests or seat edges, chest up and arms straight" },
+                { title: "Press & Depress", desc: "Press down firmly, drawing shoulders down and lengthening neck" },
+                { title: "Hover Hips", desc: "Optional: lift hips 1 cm off seat, holding for 3 seconds" }
             ],
-            iconSvg: `<svg width="36" height="36" viewBox="0 0 64 64" fill="none">
-                <line x1="12" y1="38" x2="20" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round" />
-                <line x1="44" y1="38" x2="52" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round" />
+            iconSvg: `<svg width="120" height="120" viewBox="0 0 80 80" fill="none">
+                <!-- Chair Seat (fixed) -->
+                <line x1="20" y1="62" x2="60" y2="62" stroke="rgba(255,255,255,0.08)" stroke-width="3" stroke-linecap="round" />
+                <!-- Chair Armrests (fixed) -->
+                <line x1="16" y1="48" x2="26" y2="48" stroke="rgba(255,255,255,0.2)" stroke-width="3" stroke-linecap="round" />
+                <line x1="54" y1="48" x2="64" y2="48" stroke="rgba(255,255,255,0.2)" stroke-width="3" stroke-linecap="round" />
+
+                <!-- Spine/Torso Center Line -->
+                <line x1="40" y1="58" x2="40" y2="38" stroke="rgba(255,255,255,0.2)" stroke-width="3">
+                    <animate attributeName="y1" values="58; 52; 58" dur="4s" repeatCount="indefinite" />
+                    <animate attributeName="y2" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
+                </line>
+
+                <!-- Arms (connected to fixed hands at 21,48 and 59,48) -->
+                <line x1="21" y1="48" x2="32" y2="38" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round">
+                    <animate attributeName="y2" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
+                </line>
+                <line x1="59" y1="48" x2="48" y2="38" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round">
+                    <animate attributeName="y2" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
+                </line>
+
+                <!-- Shoulders Line -->
+                <line x1="32" y1="38" x2="48" y2="38" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round">
+                    <animate attributeName="y1" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
+                    <animate attributeName="y2" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
+                </line>
+
+                <!-- Neck (Highlighting the elongation) -->
+                <line x1="40" y1="38" x2="40" y2="26" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" filter="url(#glow)">
+                    <animate attributeName="y1" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
+                    <animate attributeName="y2" values="26; 16; 26" dur="4s" repeatCount="indefinite" />
+                </line>
+
+                <!-- Head -->
+                <circle cx="40" cy="20" r="6" stroke="rgba(255,255,255,0.6)" stroke-width="3">
+                    <animate attributeName="cy" values="20; 10; 20" dur="4s" repeatCount="indefinite" />
+                </circle>
+
+                <!-- Arrows indicating shoulders pressing down / body rising -->
                 <g>
-                    <animateTransform attributeName="transform" type="translate"
-                                      values="0,0; 0,-5; 0,0" dur="4s" repeatCount="indefinite" />
-                    <line x1="16" y1="38" x2="16" y2="30" stroke="rgba(255,255,255,0.5)" stroke-width="2" />
-                    <line x1="48" y1="38" x2="48" y2="30" stroke="rgba(255,255,255,0.5)" stroke-width="2" />
-                    <line x1="16" y1="30" x2="48" y2="30" stroke="#0A84FF" stroke-width="3" stroke-linecap="round" />
-                    <line x1="32" y1="30" x2="32" y2="20" stroke="#ffffff" stroke-width="2" />
-                    <circle cx="32" cy="16" r="4" fill="#ffffff" />
+                    <path d="M 40 44 L 40 50 M 40 50 L 37 47 M 40 50 L 43 47" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" />
+                    <animateTransform attributeName="transform" type="translate" values="0,0; 0,4; 0,0" dur="4s" repeatCount="indefinite" />
                 </g>
             </svg>`
         }
@@ -474,11 +670,35 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
     const randomIdx = Math.floor(Math.random() * exercises.length);
     const ex = exercises[randomIdx];
 
-    document.getElementById('exercise-icon').innerHTML = ex.iconSvg;
+    // 设置动态主题颜色
+    let accentColor, accentRgb;
+    if (ex.id === 'desk-plus') {
+        accentColor = '#00d2ff';
+        accentRgb = '0, 210, 255';
+    } else if (ex.id === 'seated-punch-plus') {
+        accentColor = '#ff5e62';
+        accentRgb = '255, 94, 98';
+    } else {
+        accentColor = '#00ff87';
+        accentRgb = '0, 255, 135';
+    }
+    document.documentElement.style.setProperty('--accent', accentColor);
+    document.documentElement.style.setProperty('--accent-rgb', accentRgb);
+
+    document.getElementById('exercise-illustration').innerHTML = ex.iconSvg;
     document.getElementById('exercise-label').textContent = ex.label;
     document.getElementById('exercise-title').textContent = ex.title;
+    document.getElementById('exercise-reps').textContent = ex.reps;
 
-    const stepsHtml = ex.steps.map(step => `<div class="exercise-step">${step}</div>`).join('<div class="exercise-divider"></div>');
+    const stepsHtml = ex.steps.map((step, idx) => `
+        <div class="exercise-step">
+            <div class="step-number">${idx + 1}</div>
+            <div class="step-content">
+                <div class="step-title">${step.title}</div>
+                <div class="step-desc">${step.desc}</div>
+            </div>
+        </div>
+    `).join('');
     document.getElementById('exercise-steps').innerHTML = stepsHtml;
 
     // 跳过确认弹窗逻辑
@@ -530,7 +750,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r##"<!DOCTYPE html>
 </script>
 </body>
 </html>
-"##;
+"#;
 
 fn escape_html(value: &str) -> String {
     let mut escaped = String::with_capacity(value.len());
