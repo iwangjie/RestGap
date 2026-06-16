@@ -157,13 +157,6 @@ impl Texts {
         }
     }
 
-    pub const fn remaining_title_working(&self) -> &'static str {
-        match self.lang {
-            Language::En => "Break remaining: —",
-            Language::Zh => "休息剩余：—",
-        }
-    }
-
     pub const fn settings_title(&self) -> &'static str {
         match self.lang {
             Language::En => "Settings",

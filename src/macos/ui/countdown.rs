@@ -53,20 +53,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             user-select: none;
         }
 
-        .bg-glow {
-            position: absolute;
-            width: 150vmax;
-            height: 150vmax;
-            background: radial-gradient(circle at center, rgba(var(--accent-rgb), 0.08) 0%, transparent 60%);
-            animation: breathe 10s infinite ease-in-out;
-            pointer-events: none;
-            z-index: 0;
-        }
 
-        @keyframes breathe {
-            0%, 100% { transform: scale(1); opacity: 0.4; }
-            50% { transform: scale(1.15); opacity: 0.8; }
-        }
 
         .container {
             display: flex;
@@ -102,7 +89,6 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             letter-spacing: 0.4em;
             text-transform: uppercase;
             color: var(--accent);
-            text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.4);
             transition: all 0.5s ease;
         }
 
@@ -118,17 +104,12 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         /* 极简工位训练卡片 */
         .exercise-card {
             width: 720px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(var(--accent-rgb), 0.15);
+            background: transparent;
+            border: none;
             border-radius: 32px;
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
             display: flex;
             gap: 40px;
             padding: 40px;
-            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6), 
-                        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-                        0 0 40px rgba(var(--accent-rgb), 0.02);
             transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
             box-sizing: border-box;
         }
@@ -136,8 +117,8 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         .exercise-left {
             width: 220px;
             height: 220px;
-            background: rgba(var(--accent-rgb), 0.03);
-            border: 1px solid rgba(var(--accent-rgb), 0.08);
+            background: transparent;
+            border: none;
             border-radius: 24px;
             display: flex;
             align-items: center;
@@ -145,7 +126,6 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             flex-shrink: 0;
             position: relative;
             overflow: hidden;
-            box-shadow: inset 0 0 20px rgba(var(--accent-rgb), 0.05);
         }
 
         .exercise-left::before {
@@ -188,8 +168,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             border-radius: 100px;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            border: 1px solid rgba(var(--accent-rgb), 0.2);
-            box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.1);
+            border: none;
         }
 
         .exercise-title {
@@ -198,7 +177,6 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             font-weight: 700;
             color: #ffffff;
             letter-spacing: -0.02em;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
         .exercise-steps {
@@ -219,7 +197,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             height: 32px;
             border-radius: 50%;
             background: rgba(var(--accent-rgb), 0.08);
-            border: 1px solid rgba(var(--accent-rgb), 0.25);
+            border: none;
             color: var(--accent);
             display: flex;
             align-items: center;
@@ -228,7 +206,6 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             font-weight: 700;
             flex-shrink: 0;
             margin-top: 2px;
-            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.1);
         }
 
         .step-content {
@@ -262,13 +239,12 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             font-weight: 600;
             color: #ffffff;
             background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: none;
             padding: 8px 18px;
             border-radius: 14px;
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         .exercise-reps-badge::before {
@@ -277,7 +253,6 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             height: 8px;
             background-color: var(--accent);
             border-radius: 50%;
-            box-shadow: 0 0 10px var(--accent);
         }
 
         /* 隐藏的跳过按钮 */
@@ -447,20 +422,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <!-- 全局 SVG 滤镜定义 -->
-    <svg style="position: absolute; width: 0; height: 0;">
-        <defs>
-            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="2" result="blur" />
-                <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                </feMerge>
-            </filter>
-        </defs>
-    </svg>
 
-    <div class="bg-glow"></div>
     <div class="skip-btn" id="skip-btn" onclick="openSkipModal()">Skip</div>
 
     <div class="container">
@@ -536,13 +498,13 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             title: currentLang === 'zh' ? "办公桌“推击加壳” (Desk Plus)" : "Desk Plus (Desk Press & Push)",
             reps: currentLang === 'zh' ? "建议重复 10 次" : "10 Reps Recommended",
             steps: currentLang === 'zh' ? [
-                { title: "双手平放", desc: "身体前倾，双手掌平放在办公桌上，手肘绝对伸直" },
-                { title: "向下推撑", desc: "双手用力按压桌子，借助反作用力让上背部向后拱起" },
-                { title: "放松还原", desc: "保持双臂伸直，放松并让胸口下沉，感受背部夹紧" }
+                { title: "双手平放", desc: "双手平放桌面，身体前倾，手肘伸直" },
+                { title: "向下推撑", desc: "用力下压桌子，使上背部向后拱起" },
+                { title: "放松还原", desc: "放松让胸口下沉，感受背部夹紧" }
             ] : [
-                { title: "Place Hands", desc: "Lean forward, place hands flat on desk, lock elbows straight" },
-                { title: "Press Down", desc: "Press desk down firmly, arching your upper back backward" },
-                { title: "Relax & Sink", desc: "Keep arms straight, let chest sink down to squeeze back" }
+                { title: "Place Hands", desc: "Hands flat on desk, lean forward, elbows straight" },
+                { title: "Press Down", desc: "Press desk down, arching upper back" },
+                { title: "Relax & Sink", desc: "Relax, let chest sink to squeeze back" }
             ],
             iconSvg: `<svg width="120" height="120" viewBox="0 0 80 80" fill="none">
                 <!-- Desk -->
@@ -550,7 +512,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
                 <!-- Arms (straight) -->
                 <line x1="30" y1="60" x2="45" y2="35" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round"/>
                 <!-- Spine (Arching/sinking) -->
-                <path d="M 60 55 Q 56 42 45 35" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" fill="none" filter="url(#glow)">
+                <path d="M 60 55 Q 56 42 45 35" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" fill="none">
                     <animate attributeName="d"
                              values="M 60 55 Q 56 42 45 35; M 60 55 Q 65 42 45 35; M 60 55 Q 50 42 45 35; M 60 55 Q 56 42 45 35"
                              dur="5s" repeatCount="indefinite" />
@@ -572,13 +534,13 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             title: currentLang === 'zh' ? "空气“V字盲推” (Seated Punch Plus)" : "Air V-Push (Seated Punch Plus)",
             reps: currentLang === 'zh' ? "建议重复 8-10 次" : "8-10 Reps Recommended",
             steps: currentLang === 'zh' ? [
-                { title: "V字举手", desc: "背部离开椅背挺直，双手斜前方30°-45°举起，大拇指朝上" },
-                { title: "前推肩膀", desc: "保持手臂伸直，用肩膀力量将双手拼命向前伸，悬停1秒" },
-                { title: "收回还原", desc: "原路收缩肩膀，手不要放下来，保持手臂抬起" }
+                { title: "V字举手", desc: "挺直坐姿，双手向斜前方举起，大拇指朝上" },
+                { title: "前推肩膀", desc: "手臂伸直，用肩膀力量将双手向前伸展1秒" },
+                { title: "收回还原", desc: "收回肩膀，保持手臂抬起" }
             ] : [
-                { title: "Raise V-Arms", desc: "Sit tall, raise arms at a 30°-45° diagonal angle, thumbs up" },
-                { title: "Push Forward", desc: "Keep arms straight, push shoulders forward as far as possible, hold 1s" },
-                { title: "Retract Back", desc: "Pull shoulders back to start position, keeping arms raised" }
+                { title: "Raise V-Arms", desc: "Sit tall, raise arms diagonally, thumbs up" },
+                { title: "Push Forward", desc: "Extend arms and shoulders forward, hold 1s" },
+                { title: "Retract Back", desc: "Retract shoulders, keeping arms raised" }
             ],
             iconSvg: `<svg width="120" height="120" viewBox="0 0 80 80" fill="none">
                 <!-- Chair backrest outline (aesthetic context) -->
@@ -590,7 +552,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
                     <animate attributeName="x2" values="55; 51; 57; 55" dur="4s" repeatCount="indefinite" />
                 </line>
                 <!-- Arm extending (V-push forward/back) -->
-                <line x1="55" y1="35" x2="25" y2="25" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" filter="url(#glow)">
+                <line x1="55" y1="35" x2="25" y2="25" stroke="var(--accent)" stroke-width="4" stroke-linecap="round">
                     <animate attributeName="x1" values="55; 51; 57; 55" dur="4s" repeatCount="indefinite" />
                     <animate attributeName="x2" values="25; 18; 29; 25" dur="4s" repeatCount="indefinite" />
                 </line>
@@ -611,13 +573,13 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             title: currentLang === 'zh' ? "办公椅“反向撑体” (Chair Depressions)" : "Chair Depressions",
             reps: currentLang === 'zh' ? "每次 3 秒 · 建议重复 8 次" : "3s Hold · 8 Reps Recommended",
             steps: currentLang === 'zh' ? [
-                { title: "双手撑扶", desc: "双手撑在扶手或屁股两侧椅面边缘，挺胸且手臂伸直" },
-                { title: "用力下沉", desc: "用力将扶手往下压，借助反作用力将肩膀沉下，脖子拉长" },
-                { title: "屁股悬空", desc: "可选：能力强者可将屁股微微悬空1厘米，保持3秒" }
+                { title: "双手撑扶", desc: "双手撑在扶手或椅面边缘，手臂伸直" },
+                { title: "用力下沉", desc: "用力下压，肩膀下沉，脖子拉长" },
+                { title: "屁股悬空", desc: "可选：屁股微微悬空，保持3秒" }
             ] : [
-                { title: "Grip Armrests", desc: "Place hands on armrests or seat edges, chest up and arms straight" },
-                { title: "Press & Depress", desc: "Press down firmly, drawing shoulders down and lengthening neck" },
-                { title: "Hover Hips", desc: "Optional: lift hips 1 cm off seat, holding for 3 seconds" }
+                { title: "Grip Armrests", desc: "Hands on armrests or seat edges, arms straight" },
+                { title: "Press & Depress", desc: "Press down, drawing shoulders down, lengthening neck" },
+                { title: "Hover Hips", desc: "Optional: lift hips slightly, hold 3s" }
             ],
             iconSvg: `<svg width="120" height="120" viewBox="0 0 80 80" fill="none">
                 <!-- Chair Seat (fixed) -->
@@ -647,7 +609,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
                 </line>
 
                 <!-- Neck (Highlighting the elongation) -->
-                <line x1="40" y1="38" x2="40" y2="26" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" filter="url(#glow)">
+                <line x1="40" y1="38" x2="40" y2="26" stroke="var(--accent)" stroke-width="4" stroke-linecap="round">
                     <animate attributeName="y1" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
                     <animate attributeName="y2" values="26; 16; 26" dur="4s" repeatCount="indefinite" />
                 </line>

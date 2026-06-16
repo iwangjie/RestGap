@@ -12,5 +12,5 @@ pub use dialogs::show_about_dialog;
 pub use settings::open_settings_dialog;
 pub use status_bar::{
     refresh_header_title, refresh_menu_info, refresh_static_menu_titles, refresh_status_title,
-    set_rest_now_enabled, setup_status_item, target_anyobject,
+    setup_status_item, target_anyobject,
 };

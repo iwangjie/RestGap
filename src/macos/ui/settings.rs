@@ -487,6 +487,9 @@ pub fn open_settings_dialog(delegate: &RestGapDelegate) {
         ]
     };
     let window: Retained<NSWindow> = window.into_super();
+    unsafe {
+        window.setReleasedWhenClosed(false);
+    }
 
     window.setTitle(&NSString::from_str(texts.settings_title()));
     window.setTitlebarAppearsTransparent(true);

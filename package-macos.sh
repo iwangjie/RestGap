@@ -48,6 +48,23 @@ echo "🧩 写入 universal2 可执行文件到 .app..."
 cp "${FAT_BIN}" "${APP_BIN}"
 chmod +x "${APP_BIN}"
 
+INFO_PLIST="${APP_PATH}/Contents/Info.plist"
+PKG_INFO="${APP_PATH}/Contents/PkgInfo"
+
+if [[ ! -f "${INFO_PLIST}" ]]; then
+  echo "❌ 未找到 app Info.plist：${INFO_PLIST}"
+  exit 1
+fi
+
+# cargo-packager 0.11.x currently emits LSRequiresCarbon for .app bundles.
+# Modern 64-bit AppKit apps must not advertise Carbon; LaunchServices may reject
+# the bundle as invalid before the menu bar app can start.
+/usr/libexec/PlistBuddy -c "Delete :LSRequiresCarbon" "${INFO_PLIST}" >/dev/null 2>&1 || true
+printf 'APPL????' > "${PKG_INFO}"
+
+echo "🔏 ad-hoc 签名 .app..."
+codesign --force --deep --sign - "${APP_PATH}" >/dev/null
+
 if command -v jq >/dev/null 2>&1; then
   VERSION=$("${CARGO_CMD[@]}" metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="restgap") | .version' | head -n 1)
 else

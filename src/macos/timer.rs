@@ -9,8 +9,8 @@ use super::config::Config;
 use super::delegate::RestGapDelegate;
 use super::state::{NotifyEvent, Phase, with_state};
 use super::ui::{
-    finish_countdown, refresh_header_title, refresh_menu_info, refresh_status_title,
-    set_rest_now_enabled, show_countdown_window, target_anyobject,
+    finish_countdown, refresh_header_title, refresh_menu_info, refresh_static_menu_titles,
+    refresh_status_title, show_countdown_window, target_anyobject,
 };
 
 /// 调度阶段定时器
@@ -56,7 +56,7 @@ pub fn schedule_phase(delegate: &RestGapDelegate, phase: Phase) {
 
     refresh_status_title();
     refresh_header_title();
-    set_rest_now_enabled(phase == Phase::Working);
+    refresh_static_menu_titles();
     refresh_menu_info();
 }
 

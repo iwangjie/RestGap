@@ -1,6 +1,6 @@
 [package]
 name = "restgap"
-version = "2.0.0"
+version = "2.1.0"
 edition = "2024"
 authors = ["iwangjie <345127857@qq.com>"]
 description = "息间（RestGap）— 仅支持 macOS 的休息提醒应用"
@@ -15,7 +15,7 @@ rust-version = "1.85"
 [package.metadata.packager]
 product-name = "RestGap"
 description = "息间（RestGap）— 仅支持 macOS 的休息提醒应用"
-identifier = "com.example.restgap"
+identifier = "com.iwangjie.restgap"
 out-dir = "dist"
 binaries-dir = "target/release"
 binaries = [{ path = "restgap", main = true }]
@@ -49,6 +49,7 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSRunningApplication",
     "NSScreen",
     "NSStatusBar",
+    "NSStatusBarButton",
     "NSStatusItem",
     "NSText",
     "NSTextField",
