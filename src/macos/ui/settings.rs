@@ -12,7 +12,7 @@ use objc2_web_kit::{
     WKWebViewConfiguration,
 };
 
-use super::super::config::{Config, clamp_u64};
+use super::super::config::{Config, Theme, clamp_u64};
 use super::super::delegate::RestGapDelegate;
 use super::super::state::{with_state, with_state_ref};
 use crate::i18n::{LanguagePreference, Texts};
@@ -79,6 +79,7 @@ fn handle_callback(url: &str) {
         let mut break_seconds = None;
         let mut language = None;
         let mut allow_skip_break = None;
+        let mut theme = None;
 
         for pair in query.split('&') {
             let mut parts = pair.split('=');
@@ -96,6 +97,13 @@ fn handle_callback(url: &str) {
                     };
                 }
                 "allow_skip" => allow_skip_break = Some(val == "true"),
+                "theme" => {
+                    theme = match val {
+                        "0" => Some(Theme::Dark),
+                        "1" => Some(Theme::Light),
+                        _ => None,
+                    };
+                }
                 _ => {}
             }
         }
@@ -112,6 +120,7 @@ fn handle_callback(url: &str) {
                 break_seconds: clamp_u64(brk, Config::MIN_BREAK_SECONDS, Config::MAX_BREAK_SECONDS),
                 language: lang,
                 allow_skip_break: skip,
+                theme: theme.unwrap_or(Theme::Dark),
             };
             new_config.save();
 
@@ -146,7 +155,7 @@ pub fn close_settings_window() {
 }
 
 const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
-<html>
+<html class="__THEME_CLASS__">
 <head>
     <meta charset="UTF-8">
     <style>
@@ -157,8 +166,27 @@ const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             --text: #FFFFFF;
             --text-dim: rgba(255, 255, 255, 0.45);
             --accent: #0A84FF;
+            --input-bg: rgba(255, 255, 255, 0.06);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --line: rgba(255, 255, 255, 0.03);
+            --border-glow: rgba(255, 255, 255, 0.05);
+            --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            
             --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
             --radius: 14px;
+        }
+        html.light {
+            --bg: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --card-hover: rgba(0, 0, 0, 0.02);
+            --text: #1C1C1E;
+            --text-dim: rgba(0, 0, 0, 0.45);
+            --accent: #007AFF;
+            --input-bg: rgba(0, 0, 0, 0.04);
+            --input-border: rgba(0, 0, 0, 0.1);
+            --line: rgba(0, 0, 0, 0.05);
+            --border-glow: rgba(0, 0, 0, 0.05);
+            --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.5)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
         }
         body {
             margin: 0;
@@ -243,7 +271,7 @@ const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             border-radius: var(--radius);
             padding: 4px;
             margin-bottom: 24px;
-            border: 0.5px solid rgba(255,255,255,0.05);
+            border: 0.5px solid var(--border-glow);
         }
         .row {
             display: flex;
@@ -254,7 +282,7 @@ const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             transition: background 0.2s;
         }
         .row:not(:last-child) {
-            border-bottom: 0.5px solid rgba(255,255,255,0.03);
+            border-bottom: 0.5px solid var(--line);
         }
         .row-info {
             display: flex;
@@ -275,10 +303,10 @@ const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             gap: 8px;
         }
         input[type="number"] {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
             border-radius: 8px;
-            color: white;
+            color: var(--text);
             padding: 6px 10px;
             width: 64px;
             font-size: 14px;
@@ -288,20 +316,20 @@ const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             transition: all 0.2s;
         }
         input[type="number"]:focus {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--card-hover);
             border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
         }
         select {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
             border-radius: 8px;
-            color: white;
+            color: var(--text);
             padding: 6px 28px 6px 12px;
             font-size: 14px;
             outline: none;
             appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-image: var(--select-arrow);
             background-repeat: no-repeat;
             background-position: right 10px center;
         }
@@ -317,7 +345,7 @@ const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             position: absolute;
             cursor: pointer;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(255,255,255,0.1);
+            background-color: var(--input-bg);
             transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 24px;
         }
@@ -353,10 +381,10 @@ const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         }
         button:active { transform: scale(0.96); }
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.08);
-            color: white;
+            background: var(--input-bg);
+            color: var(--text);
         }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
+        .btn-secondary:hover { background: var(--card-hover); }
         .btn-primary {
             background: var(--accent);
             color: white;
@@ -424,6 +452,16 @@ const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
                 <option value="2" __LANG_ZH_SELECTED__>__LANG_ZH__</option>
             </select>
         </div>
+        <div class="row">
+            <div class="row-info">
+                <div class="label" id="t-theme-label">__THEME_LABEL__</div>
+                <div class="hint">Interface appearance</div>
+            </div>
+            <select id="theme">
+                <option value="0" __THEME_DARK_SELECTED__>__THEME_DARK__</option>
+                <option value="1" __THEME_LIGHT_SELECTED__>__THEME_LIGHT__</option>
+            </select>
+        </div>
     </div>
 
     <div class="footer">
@@ -437,7 +475,8 @@ const SETTINGS_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             const breakVal = document.getElementById('break').value;
             const language = document.getElementById('language').value;
             const allowSkip = document.getElementById('allow_skip').checked;
-            window.location.href = `restgap://save?interval=${interval}&break=${breakVal}&language=${language}&allow_skip=${allowSkip}`;
+            const theme = document.getElementById('theme').value;
+            window.location.href = `restgap://save?interval=${interval}&break=${breakVal}&language=${language}&allow_skip=${allowSkip}&theme=${theme}`;
         }
         function cancel() {
             window.location.href = 'restgap://cancel';
@@ -494,9 +533,11 @@ pub fn open_settings_dialog(delegate: &RestGapDelegate) {
     window.setTitle(&NSString::from_str(texts.settings_title()));
     window.setTitlebarAppearsTransparent(true);
     window.setTitleVisibility(objc2_app_kit::NSWindowTitleVisibility::Hidden);
-    window.setBackgroundColor(Some(&NSColor::colorWithSRGBRed_green_blue_alpha(
-        0.11, 0.11, 0.12, 1.0,
-    )));
+    let bg_color = match config.theme {
+        Theme::Dark => NSColor::colorWithSRGBRed_green_blue_alpha(0.11, 0.11, 0.12, 1.0),
+        Theme::Light => NSColor::colorWithSRGBRed_green_blue_alpha(0.95, 0.95, 0.97, 1.0),
+    };
+    window.setBackgroundColor(Some(&bg_color));
 
     let config_webview = unsafe { WKWebViewConfiguration::new(mtm) };
     let webview: Retained<WKWebView> = unsafe {
@@ -533,8 +574,36 @@ pub fn open_settings_dialog(delegate: &RestGapDelegate) {
         .replace("__LANG_AUTO__", texts.language_auto())
         .replace("__LANG_EN__", texts.language_en())
         .replace("__LANG_ZH__", texts.language_zh())
+        .replace("__THEME_LABEL__", texts.settings_theme_label())
+        .replace("__THEME_DARK__", texts.theme_dark())
+        .replace("__THEME_LIGHT__", texts.theme_light())
         .replace("__CANCEL__", texts.settings_cancel_button())
         .replace("__SAVE__", texts.settings_save_button());
+
+    html = html.replace(
+        "__THEME_CLASS__",
+        match config.theme {
+            Theme::Dark => "dark",
+            Theme::Light => "light",
+        },
+    );
+
+    html = html.replace(
+        "__THEME_DARK_SELECTED__",
+        if config.theme == Theme::Dark {
+            "selected"
+        } else {
+            ""
+        },
+    );
+    html = html.replace(
+        "__THEME_LIGHT_SELECTED__",
+        if config.theme == Theme::Light {
+            "selected"
+        } else {
+            ""
+        },
+    );
 
     html = html.replace(
         "__LANG_AUTO_SELECTED__",

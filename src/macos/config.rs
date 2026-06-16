@@ -9,6 +9,14 @@ use objc2_foundation::{NSString, NSUserDefaults};
 
 use crate::i18n::{Language, LanguagePreference};
 
+/// 界面主题外观
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Theme {
+    #[default]
+    Dark = 0,
+    Light = 1,
+}
+
 /// 应用配置
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -16,6 +24,7 @@ pub struct Config {
     pub break_seconds: u64,
     pub language: LanguagePreference,
     pub allow_skip_break: bool,
+    pub theme: Theme,
 }
 
 impl Config {
@@ -32,6 +41,7 @@ impl Config {
     const KEY_BREAK_SECONDS: &'static str = "restgap.break_seconds";
     const KEY_LANGUAGE: &'static str = "restgap.language";
     const KEY_ALLOW_SKIP_BREAK: &'static str = "restgap.allow_skip_break";
+    const KEY_THEME: &'static str = "restgap.theme";
 
     const LEGACY_KEY_INTERVAL_MINUTES: &'static str = "restp.interval_minutes";
     const LEGACY_KEY_BREAK_SECONDS: &'static str = "restp.break_seconds";
@@ -44,6 +54,7 @@ impl Config {
         let break_key = NSString::from_str(Self::KEY_BREAK_SECONDS);
         let language_key = NSString::from_str(Self::KEY_LANGUAGE);
         let allow_skip_key = NSString::from_str(Self::KEY_ALLOW_SKIP_BREAK);
+        let theme_key = NSString::from_str(Self::KEY_THEME);
 
         let legacy_interval_key = NSString::from_str(Self::LEGACY_KEY_INTERVAL_MINUTES);
         let legacy_break_key = NSString::from_str(Self::LEGACY_KEY_BREAK_SECONDS);
@@ -52,6 +63,7 @@ impl Config {
         let break_raw = defaults.integerForKey(&break_key);
         let language_raw = defaults.integerForKey(&language_key);
         let allow_skip_break = defaults.boolForKey(&allow_skip_key);
+        let theme_raw = defaults.integerForKey(&theme_key);
 
         let interval_raw = if interval_raw <= 0 {
             defaults.integerForKey(&legacy_interval_key)
@@ -82,6 +94,11 @@ impl Config {
             _ => LanguagePreference::Auto,
         };
 
+        let theme = match theme_raw {
+            1 => Theme::Light,
+            _ => Theme::Dark,
+        };
+
         Self {
             interval_minutes: clamp_u64(
                 interval_minutes,
@@ -95,6 +112,7 @@ impl Config {
             ),
             language,
             allow_skip_break,
+            theme,
         }
     }
 
@@ -105,6 +123,7 @@ impl Config {
         let break_key = NSString::from_str(Self::KEY_BREAK_SECONDS);
         let language_key = NSString::from_str(Self::KEY_LANGUAGE);
         let allow_skip_key = NSString::from_str(Self::KEY_ALLOW_SKIP_BREAK);
+        let theme_key = NSString::from_str(Self::KEY_THEME);
 
         let interval_minutes = NSInteger::try_from(self.interval_minutes).unwrap_or(NSInteger::MAX);
         let break_seconds = NSInteger::try_from(self.break_seconds).unwrap_or(NSInteger::MAX);
@@ -119,6 +138,12 @@ impl Config {
         };
         defaults.setInteger_forKey(language_raw, &language_key);
         defaults.setBool_forKey(self.allow_skip_break, &allow_skip_key);
+
+        let theme_raw = match self.theme {
+            Theme::Dark => 0,
+            Theme::Light => 1,
+        };
+        defaults.setInteger_forKey(theme_raw, &theme_key);
     }
 
     pub fn effective_language(&self) -> Language {
@@ -155,6 +180,7 @@ impl Default for Config {
             break_seconds: Self::DEFAULT_BREAK_SECONDS,
             language: LanguagePreference::Auto,
             allow_skip_break: false,
+            theme: Theme::Dark,
         }
     }
 }
@@ -182,6 +208,7 @@ mod tests {
         assert_eq!(config.break_seconds, Config::DEFAULT_BREAK_SECONDS);
         assert_eq!(config.language, LanguagePreference::Auto);
         assert!(!config.allow_skip_break);
+        assert_eq!(config.theme, Theme::Dark);
     }
 
     #[test]
@@ -191,6 +218,7 @@ mod tests {
             break_seconds: 120,
             language: LanguagePreference::Auto,
             allow_skip_break: false,
+            theme: Theme::Dark,
         };
         assert_eq!(config.work_interval(), Duration::from_secs(1800));
     }
@@ -202,6 +230,7 @@ mod tests {
             break_seconds: 120,
             language: LanguagePreference::Auto,
             allow_skip_break: false,
+            theme: Theme::Dark,
         };
         assert_eq!(config.break_duration(), Duration::from_secs(120));
     }

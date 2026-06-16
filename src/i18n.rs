@@ -213,6 +213,30 @@ impl Texts {
     }
 
     #[cfg(target_os = "macos")]
+    pub const fn settings_theme_label(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Theme Appearance:",
+            Language::Zh => "主题外观：",
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub const fn theme_dark(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Dark Theme",
+            Language::Zh => "暗色主题",
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    pub const fn theme_light(&self) -> &'static str {
+        match self.lang {
+            Language::En => "Light Theme",
+            Language::Zh => "浅色主题",
+        }
+    }
+
+    #[cfg(target_os = "macos")]
     pub const fn ok_button(&self) -> &'static str {
         match self.lang {
             Language::En => "OK",

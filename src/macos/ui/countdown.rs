@@ -22,7 +22,7 @@ use super::status_bar::target_anyobject;
 use crate::i18n::Texts;
 
 const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
-<html>
+<html class="__THEME_CLASS__">
 <head>
     <meta charset="UTF-8">
     <style>
@@ -31,11 +31,55 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             --text: #ffffff;
             --text-dim: rgba(255, 255, 255, 0.4);
             --line: rgba(255, 255, 255, 0.1);
+            
+            --svg-main: rgba(255, 255, 255, 0.6);
+            --svg-sub: rgba(255, 255, 255, 0.4);
+            --svg-bg: rgba(255, 255, 255, 0.15);
+            --svg-bg-dim: rgba(255, 255, 255, 0.08);
+            --skip-btn-bg: rgba(255, 255, 255, 0.01);
+            --skip-btn-border: rgba(255, 255, 255, 0.06);
+            --skip-btn-text: rgba(255, 255, 255, 0.25);
+            --skip-btn-hover-bg: rgba(255, 255, 255, 0.05);
+            --skip-btn-hover-border: rgba(255, 255, 255, 0.15);
+            --badge-bg: rgba(255, 255, 255, 0.04);
+            
+            --modal-bg: rgba(20, 20, 22, 0.65);
+            --modal-border: rgba(255, 255, 255, 0.08);
+            --modal-overlay: rgba(0, 0, 0, 0.75);
+
+            --gradient-start: #ffffff;
+            --gradient-end: rgba(255, 255, 255, 0.4);
+
             --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
             --font-mono: "SF Mono", "SFMono-Regular", ui-monospace, monospace;
             /* Dynamic variables set by JS */
             --accent: #00d2ff;
             --accent-rgb: 0, 210, 255;
+        }
+
+        html.light {
+            --bg: #f5f5f7;
+            --text: #1d1d1f;
+            --text-dim: rgba(29, 29, 31, 0.55);
+            --line: rgba(0, 0, 0, 0.08);
+
+            --svg-main: rgba(29, 29, 31, 0.7);
+            --svg-sub: rgba(29, 29, 31, 0.5);
+            --svg-bg: rgba(29, 29, 31, 0.15);
+            --svg-bg-dim: rgba(29, 29, 31, 0.08);
+            --skip-btn-bg: rgba(0, 0, 0, 0.02);
+            --skip-btn-border: rgba(0, 0, 0, 0.08);
+            --skip-btn-text: rgba(29, 29, 31, 0.45);
+            --skip-btn-hover-bg: rgba(0, 0, 0, 0.06);
+            --skip-btn-hover-border: rgba(0, 0, 0, 0.18);
+            --badge-bg: rgba(0, 0, 0, 0.04);
+
+            --modal-bg: rgba(255, 255, 255, 0.85);
+            --modal-border: rgba(0, 0, 0, 0.08);
+            --modal-overlay: rgba(255, 255, 255, 0.4);
+
+            --gradient-start: #1d1d1f;
+            --gradient-end: rgba(29, 29, 31, 0.5);
         }
 
         body {
@@ -78,7 +122,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             line-height: 0.9;
             letter-spacing: -0.04em;
             font-variant-numeric: tabular-nums;
-            background: linear-gradient(180deg, #ffffff 40%, rgba(255, 255, 255, 0.4) 100%);
+            background: linear-gradient(180deg, var(--gradient-start) 40%, var(--gradient-end) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -175,7 +219,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             margin: 0;
             font-size: 28px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--text);
             letter-spacing: -0.02em;
         }
 
@@ -217,13 +261,13 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         .step-title {
             font-size: 18px;
             font-weight: 600;
-            color: #ffffff;
+            color: var(--text);
             letter-spacing: -0.01em;
         }
 
         .step-desc {
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.5);
+            color: var(--text-dim);
             line-height: 1.5;
             font-weight: 400;
         }
@@ -237,8 +281,8 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         .exercise-reps-badge {
             font-size: 14px;
             font-weight: 600;
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            background: var(--badge-bg);
             border: none;
             padding: 8px 18px;
             border-radius: 14px;
@@ -263,11 +307,11 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             padding: 10px 20px;
             font-size: 14px;
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.25);
+            color: var(--skip-btn-text);
             cursor: pointer;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--skip-btn-border);
             border-radius: 12px;
-            background: rgba(255, 255, 255, 0.01);
+            background: var(--skip-btn-bg);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -276,10 +320,10 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             display: none;
         }
         .skip-btn:hover {
-            color: #ffffff;
-            border-color: rgba(255, 255, 255, 0.15);
-            background: rgba(255, 255, 255, 0.05);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            color: var(--text);
+            border-color: var(--skip-btn-hover-border);
+            background: var(--skip-btn-hover-bg);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
             transform: translateY(-1px);
         }
 
@@ -290,7 +334,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.75);
+            background: var(--modal-overlay);
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
             display: flex;
@@ -308,10 +352,10 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         .skip-modal-content {
             width: 400px;
             padding: 40px;
-            background: rgba(20, 20, 22, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: var(--modal-bg);
+            border: 1px solid var(--modal-border);
             border-radius: 28px;
-            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.3);
             display: flex;
             flex-direction: column;
             gap: 24px;
@@ -325,12 +369,12 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         .skip-modal-title {
             font-size: 20px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--text);
             letter-spacing: -0.01em;
         }
         .skip-modal-prompt {
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.5);
+            color: var(--text-dim);
             line-height: 1.6;
         }
         .skip-modal-prompt strong {
@@ -348,10 +392,10 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         .skip-input {
             width: 100%;
             box-sizing: border-box;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--badge-bg);
+            border: 1px solid var(--line);
             border-radius: 12px;
-            color: #fff;
+            color: var(--text);
             padding: 12px 16px;
             font-size: 16px;
             outline: none;
@@ -360,7 +404,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
         }
         .skip-input:focus {
             border-color: rgba(255, 69, 58, 0.4);
-            background: rgba(255, 255, 255, 0.06);
+            background: var(--badge-bg);
             box-shadow: 0 0 16px rgba(255, 69, 58, 0.1);
         }
         .skip-modal-actions {
@@ -378,12 +422,12 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             transition: all 0.2s;
         }
         .btn-cancel {
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--badge-bg);
+            color: var(--text);
+            border: 1px solid var(--line);
         }
         .btn-cancel:hover {
-            background: rgba(255, 255, 255, 0.12);
+            background: var(--card-hover);
             transform: translateY(-1px);
         }
         .btn-confirm {
@@ -508,9 +552,9 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             ],
             iconSvg: `<svg width="120" height="120" viewBox="0 0 80 80" fill="none">
                 <!-- Desk -->
-                <line x1="10" y1="60" x2="50" y2="60" stroke="rgba(255,255,255,0.2)" stroke-width="3" stroke-linecap="round"/>
+                <line x1="10" y1="60" x2="50" y2="60" stroke="var(--svg-bg)" stroke-width="3" stroke-linecap="round"/>
                 <!-- Arms (straight) -->
-                <line x1="30" y1="60" x2="45" y2="35" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round"/>
+                <line x1="30" y1="60" x2="45" y2="35" stroke="var(--svg-sub)" stroke-width="3" stroke-linecap="round"/>
                 <!-- Spine (Arching/sinking) -->
                 <path d="M 60 55 Q 56 42 45 35" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" fill="none">
                     <animate attributeName="d"
@@ -518,7 +562,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
                              dur="5s" repeatCount="indefinite" />
                 </path>
                 <!-- Head -->
-                <circle cx="40" cy="23" r="6" stroke="rgba(255,255,255,0.6)" stroke-width="3">
+                <circle cx="40" cy="23" r="6" stroke="var(--svg-main)" stroke-width="3">
                     <animate attributeName="cx"
                              values="40; 38; 42; 40"
                              dur="5s" repeatCount="indefinite" />
@@ -544,11 +588,11 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             ],
             iconSvg: `<svg width="120" height="120" viewBox="0 0 80 80" fill="none">
                 <!-- Chair backrest outline (aesthetic context) -->
-                <path d="M 65 70 L 65 35" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round" />
+                <path d="M 65 70 L 65 35" stroke="var(--svg-bg-dim)" stroke-width="3" stroke-linecap="round" />
                 <!-- Hips/Seat -->
-                <line x1="45" y1="60" x2="65" y2="60" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round" />
+                <line x1="45" y1="60" x2="65" y2="60" stroke="var(--svg-bg-dim)" stroke-width="3" stroke-linecap="round" />
                 <!-- Spine (sitting tall) -->
-                <line x1="55" y1="60" x2="55" y2="35" stroke="rgba(255,255,255,0.3)" stroke-width="3" stroke-linecap="round">
+                <line x1="55" y1="60" x2="55" y2="35" stroke="var(--svg-sub)" stroke-width="3" stroke-linecap="round">
                     <animate attributeName="x2" values="55; 51; 57; 55" dur="4s" repeatCount="indefinite" />
                 </line>
                 <!-- Arm extending (V-push forward/back) -->
@@ -557,7 +601,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
                     <animate attributeName="x2" values="25; 18; 29; 25" dur="4s" repeatCount="indefinite" />
                 </line>
                 <!-- Head -->
-                <circle cx="55" cy="21" r="6" stroke="rgba(255,255,255,0.6)" stroke-width="3">
+                <circle cx="55" cy="21" r="6" stroke="var(--svg-main)" stroke-width="3">
                     <animate attributeName="cx" values="55; 52; 56; 55" dur="4s" repeatCount="indefinite" />
                 </circle>
                 <!-- Arrow showing motion direction -->
@@ -583,27 +627,27 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             ],
             iconSvg: `<svg width="120" height="120" viewBox="0 0 80 80" fill="none">
                 <!-- Chair Seat (fixed) -->
-                <line x1="20" y1="62" x2="60" y2="62" stroke="rgba(255,255,255,0.08)" stroke-width="3" stroke-linecap="round" />
+                <line x1="20" y1="62" x2="60" y2="62" stroke="var(--svg-bg-dim)" stroke-width="3" stroke-linecap="round" />
                 <!-- Chair Armrests (fixed) -->
-                <line x1="16" y1="48" x2="26" y2="48" stroke="rgba(255,255,255,0.2)" stroke-width="3" stroke-linecap="round" />
-                <line x1="54" y1="48" x2="64" y2="48" stroke="rgba(255,255,255,0.2)" stroke-width="3" stroke-linecap="round" />
+                <line x1="16" y1="48" x2="26" y2="48" stroke="var(--svg-bg)" stroke-width="3" stroke-linecap="round" />
+                <line x1="54" y1="48" x2="64" y2="48" stroke="var(--svg-bg)" stroke-width="3" stroke-linecap="round" />
 
                 <!-- Spine/Torso Center Line -->
-                <line x1="40" y1="58" x2="40" y2="38" stroke="rgba(255,255,255,0.2)" stroke-width="3">
+                <line x1="40" y1="58" x2="40" y2="38" stroke="var(--svg-bg)" stroke-width="3">
                     <animate attributeName="y1" values="58; 52; 58" dur="4s" repeatCount="indefinite" />
                     <animate attributeName="y2" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
                 </line>
 
                 <!-- Arms (connected to fixed hands at 21,48 and 59,48) -->
-                <line x1="21" y1="48" x2="32" y2="38" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round">
+                <line x1="21" y1="48" x2="32" y2="38" stroke="var(--svg-sub)" stroke-width="3" stroke-linecap="round">
                     <animate attributeName="y2" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
                 </line>
-                <line x1="59" y1="48" x2="48" y2="38" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round">
+                <line x1="59" y1="48" x2="48" y2="38" stroke="var(--svg-sub)" stroke-width="3" stroke-linecap="round">
                     <animate attributeName="y2" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
                 </line>
 
                 <!-- Shoulders Line -->
-                <line x1="32" y1="38" x2="48" y2="38" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round">
+                <line x1="32" y1="38" x2="48" y2="38" stroke="var(--svg-sub)" stroke-width="3" stroke-linecap="round">
                     <animate attributeName="y1" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
                     <animate attributeName="y2" values="38; 32; 38" dur="4s" repeatCount="indefinite" />
                 </line>
@@ -615,7 +659,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
                 </line>
 
                 <!-- Head -->
-                <circle cx="40" cy="20" r="6" stroke="rgba(255,255,255,0.6)" stroke-width="3">
+                <circle cx="40" cy="20" r="6" stroke="var(--svg-main)" stroke-width="3">
                     <animate attributeName="cy" values="20; 10; 20" dur="4s" repeatCount="indefinite" />
                 </circle>
 
@@ -664,7 +708,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
     document.getElementById('exercise-steps').innerHTML = stepsHtml;
 
     // 跳过确认弹窗逻辑
-    const targetText = currentLang === 'zh' ? '紧急情况，跳过休息' : 'Emergency, skip break';
+    const targetText = currentLang === 'zh' ? '紧急情况' : 'Emergency';
     
     window.openSkipModal = () => {
         const modal = document.getElementById('skip-modal');
@@ -699,6 +743,7 @@ const COUNTDOWN_HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
             if (input.value === targetText) {
                 confirmBtn.classList.add('active');
                 confirmBtn.disabled = false;
+                window.confirmSkip();
             } else {
                 confirmBtn.classList.remove('active');
                 confirmBtn.disabled = true;
@@ -735,6 +780,7 @@ fn build_countdown_html(
     hint: &str,
     skip_enabled: bool,
     lang: &str,
+    theme: crate::macos::config::Theme,
 ) -> String {
     let mut html = COUNTDOWN_HTML_TEMPLATE.replace("__TITLE__", &escape_html(title));
     html = html.replace("__TITLE__", &escape_html(title));
@@ -744,7 +790,14 @@ fn build_countdown_html(
         "__SKIP_ENABLED__",
         if skip_enabled { "true" } else { "false" },
     );
-    html.replace("__LANG__", lang)
+    html = html.replace("__LANG__", lang);
+    html.replace(
+        "__THEME_CLASS__",
+        match theme {
+            crate::macos::config::Theme::Dark => "dark",
+            crate::macos::config::Theme::Light => "light",
+        },
+    )
 }
 
 fn update_countdown_text(webview: &WKWebView, text: &str) {
@@ -837,9 +890,13 @@ define_class!(
 #[allow(clippy::too_many_lines)]
 pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_start_sound: bool) {
     let mtm = delegate.mtm();
-    let (texts, allow_skip_break) = with_state(|state| {
+    let (texts, allow_skip_break, theme) = with_state(|state| {
         let language = state.config.effective_language();
-        (Texts::new(language), state.config.allow_skip_break)
+        (
+            Texts::new(language),
+            state.config.allow_skip_break,
+            state.config.theme,
+        )
     });
     let lang_str = match texts.language() {
         crate::i18n::Language::En => "en",
@@ -854,7 +911,14 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
         play_sound("Glass");
     }
 
-    let background = NSColor::colorWithSRGBRed_green_blue_alpha(0.0, 0.0, 0.0, 1.0);
+    let background = match theme {
+        crate::macos::config::Theme::Dark => {
+            NSColor::colorWithSRGBRed_green_blue_alpha(0.043, 0.043, 0.059, 1.0)
+        }
+        crate::macos::config::Theme::Light => {
+            NSColor::colorWithSRGBRed_green_blue_alpha(0.96, 0.96, 0.97, 1.0)
+        }
+    };
     // 收集所有屏幕的 frame（多屏幕时逐屏覆盖）
     let screens = NSScreen::screens(mtm);
     let screen_count = screens.count();
@@ -881,6 +945,7 @@ pub fn show_countdown_window(delegate: &RestGapDelegate, seconds: u64, play_star
         texts.countdown_hint(),
         allow_skip_break,
         lang_str,
+        theme,
     );
     let html = NSString::from_str(&html);
 
